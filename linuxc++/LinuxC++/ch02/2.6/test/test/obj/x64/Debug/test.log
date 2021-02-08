@@ -1,0 +1,9 @@
+﻿  Cleaning remote project directory
+  Validating architecture
+  Validating sources
+  Copying sources remotely
+  Starting remote build
+  Compiling sources:
+  main.cpp
+  Linking objects
+  test.vcxproj -> F:\mybook\Linux\LinuxC++yixian\prj\code\ch02\2.6\test\test\bin\x64\Debug\test.out

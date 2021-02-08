@@ -1,0 +1,1 @@
+g++ -o "/root/projects/test/bin/x64/Debug/test.out" -Wl,--no-undefined -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack /root/projects/test/obj/x64/Debug/main.o

@@ -1,0 +1,14 @@
+mytool:main.o tool1.o tool2.o
+	gcc main.o tool1.o tool2.o -Wall -g -o mytool
+
+main.o:main.c
+	gcc main.c -g -Wall -c -o main.o
+
+tool1.o:tool1.c
+	gcc tool1.c -g -Wall -c -o tool1.o
+
+tool2.o:tool2.c
+	gcc tool2.c -g -Wall -c -o tool2.o
+
+clean:
+	rm *.o mytool -rf
