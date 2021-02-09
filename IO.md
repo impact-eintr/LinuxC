@@ -506,7 +506,8 @@ int main()
 
 ### 程序中的重定向
 - dup
-- dup2
+将传入的文件描述符复制到可使用的(未使用的)最小新文件描述符,在下面的例子中，将标准输出关闭后，文件描述符1空闲(不发生竞争时)，`dup`将会把打开了文件`/tmp/out`的文件描述符复制给文件描述符1 ，之后对文件描述符1 的操作就相当与操作文件`/tmp/out`
+
 ~~~ c
 #include <stdio.h>
 #include <stdlib.h>
@@ -527,14 +528,43 @@ int main()
         exit(1);
     }
     //dup 不原子
-    //close(1);//关闭标准输出
-    //dup(fd);
+    close(1);//关闭标准输出
+    dup(fd);
+    close(fd);
     
+    /*********************/
+    printf("Hello world\n");
+    return 0;
+}
+
+~~~
+
+- dup2
+`dup2`可以避免关闭文件描述符后被其他线程抢占
+~~~ c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
+
+#define FNAME "/tmp/out"
+
+
+int main()
+{
+    int fd;
+    fd = open(FNAME,O_WRONLY|O_CREAT|O_TRUNC,0600);
+    if (fd < 0) {
+        perror("open()");
+        exit(1);
+    }
     //dup2 原子
     dup2(fd,1);
 	
-	if (fd != 1) {
-		close(1);
+	if (fd != 1) {//打开的文件描述符如果不是1自己，就可以把他关掉了，有重定向后的 1 可以访问文件，保持尽量少的资源使用
+		close(fd);
 	}
 
     /*********************/
@@ -543,7 +573,11 @@ int main()
 }
 
 ~~~
+
 ### 同步
 - sync
+设备即将解除挂载时进行全局催促，将buffer cache的数据刷新
 - fsync
+刷新文件的数据
 - fdatasync
+刷新文件的数据部分，不修改文件元数据
