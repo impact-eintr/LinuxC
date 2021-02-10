@@ -281,6 +281,212 @@ int main(int argc,char **argv)
 
 ~~~
 ## 系统数据文件和信息
+1. `/etc/passwd`
+    - getpwuid();
+    - getpwnam();
+2. `/etc/group`
+    - getgrgid();
+    - getgrgrnam();
+3. `/etc/shadow`
+    - getspnam();
+    - crypt();
+    - getpass();
+
+~~~ c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <shadow.h>
+#include <string.h>
+
+int main(int argc,char **argv)
+{
+    char *input_passwd;//来自命令行的密码原文
+    char *crypted_passwd;
+    struct spwd *shadowline;
+    
+    if (argc < 2) {
+        fprintf(stderr,"Usage...\n");
+        exit(1);
+    }
+
+    input_passwd = getpass("PassWoed:");
+
+    shadowline = getspnam(argv[1]);
+
+    crypted_passwd = crypt(input_passwd,shadowline->sp_pwdp);
+    
+    if (strcmp(shadowline->sp_pwdp,crypted_passwd) == 0)
+      puts("ok!");
+    else
+      puts("failed!");
+
+    return 0;
+}
+
+以上代码编译后(编译要加`-lcryp`) ，要使用root用户执行(普通用户没有权限)
+
+~~~
+
+### 时间戳
+**time_t => char * => struct_tm**
+
+- time() 从kernel中取出时间戳(以秒为单位)
+- gntime() 将时间戳转换为`struct_tm` 格林威治时间
+- localtime() 将时间戳转换为`struct_tm` 本地时间
+- mktime() jaing struct_tm结构体转换为时间戳，还可以检查是否溢出
+- strftime(); 格式化时间字符串
+
+~~~ c
+time_t stamp;
+time(&stamp);
+stamp = time(NULL);
+
+tm = localtime(&stamp);
+
+strftime(buf,BUFSIZE,"%Y-%m-%d",tm);
+puts(buf);
+~~~
+
+~~~ c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <time.h>
+#include <string.h>
+
+#define BUFSIZE 1024
+
+int main()
+{
+
+    char fmttime[BUFSIZ];
+    int count = 0;
+
+    FILE *fptr = fopen("./log","a+");
+    if (fptr == NULL) {
+        perror("fopen()");
+        exit(1);
+    }
+
+    char buf[BUFSIZE];
+
+    while(fgets(buf,BUFSIZE,fptr) != NULL){
+        count++;
+    }
+
+    char res[BUFSIZE];
+
+    while (1){
+        time_t stamp;
+        stamp = time(NULL);
+
+        struct tm *struct_tm;
+        struct_tm = localtime(&stamp);
+
+        strftime(fmttime,BUFSIZE,"%Y-%m-%d %H:%M:%S",struct_tm);
+        fprintf(fptr,"%d %s\n",++count,fmttime);
+        fflush(fptr);
+        sleep(1);
+    }
+
+    fclose(fptr);
+
+    exit(0);
+}
+
+~~~
 
 ## 进程环境
+### main函数
+- `int main(int argc,char **argv)`
+### 进程的终止
+- **正常终止**
+     - **从main函数返回** 
+     - **调用exit**
+     - **调用`_exit`或者`_Exit`**
+     - **最后一个线程从其启动例程返回**
+     - **最后一个线程调用`pthread_exit`**
+#### 钩子函数a
+    All functions registered with atexit(3) and on_exit(3) are called,in the reverse order of their registration.
+- `atexit()`
+~~~ c
 
+~~~
+
+- **异常终止**
+    - **调用`abort`**
+    - **接到一个信号并终止**
+    - **最后一个线程对其取消请求作出响应**
+
+~~~ c
+
+~~~
+
+### 命令行参数的分析
+
+~~~ c
+
+//解析命令行
+while(1) {
+    c = getopt(argc,argv,"lt-a"); // - 识别非选项的传参
+    if (c < 0){
+        break;
+    }
+    
+    switch (c){
+        case 'l':
+            f.filesize = flen(argv[1]);
+            strncat(fmtstr,"filesize:%ld ",FMTSTRSIZE-1);
+            break;
+        case 't':
+            f.filetype = ftype(argv[1]);
+            strncat(fmtstr,"filetype:%c ",FMTSTRSIZE-1);
+            break;
+        case 'a':
+            PathParse(argv[optind]);
+            break;
+        default:
+            break;
+    }
+}
+~~~
+
+### 环境变量
+**本质就是 KEY = VALUE**
+- `export`
+- getenv()
+- setenv()
+~~~ c
+#include <stdio.h>
+#include <stdlib.h>
+
+extern char **environ;
+
+static void getEnv(char *key){
+    puts(getenv(key));
+}
+
+int main()
+{
+    
+    for (int i = 0;environ[i] != NULL;i++){
+        puts(environ[i]);
+    }
+    getEnv("ZSH");
+    return 0;
+}
+~~~
+
+### C程序的存储空间布局
+
+- pmap (1)
+### 库
+##### 动态库
+
+##### 静态库
+
+#### 手工装载库
+### 函数跳转
+
+### 资源的获取与控制
