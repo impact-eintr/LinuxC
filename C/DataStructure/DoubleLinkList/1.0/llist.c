@@ -52,20 +52,67 @@ int llist_insert(LLIST *head,const void *data,int mode){
     return 0;
 
 }
-//传入
-//llist_find();
-//llist_delete();
-//llist_fetch();
-//传入 一个已经创建好的链表头节点
-void llist_travel(LLIST* head);
+//传入 一个已经创建好的链表头节点,一个辅助遍历函数
+void llist_travel(LLIST* head,void (*func)(const void *)){
+    struct llist_node_st *cur,*next;
+    for (cur = head->head.next;cur != &head->head;cur = next) {
+        func(cur->data);
+        next = cur->next;
+    }
+}
+
+//辅助函数
+static struct llist_node_st *find_(LLIST *head,const void *key,int (*func)(const void *,const void *)){
+    struct llist_node_st *cur;
+    for (cur = head->head.next;cur != &head->head;cur = cur->next){
+        if (func(key,cur->data) == 0){
+            return cur;
+        }
+    }
+    return &head->head;
+}
+
+void *llist_find(LLIST *head,const void* key,int (*func)(const void*,const void*)){
+    return find_(head,key,func)->data;
+}
+
+//
+int llist_delete(LLIST *head,const void* key,int (*func)(const void*,const void*)){
+    struct llist_node_st *node;
+    node = find_(head,key,func);
+    if (node == &head->head){
+        return -1;
+    }else {
+        node->prev->next = node->next;
+        node->next->prev = node->prev;
+        free(node->data);
+        free(node);
+        return 0;
+    }
+}
+//
+int llist_fetch(LLIST *head,const void* key,int (*func)(const void*,const void*),void *data){
+    struct llist_node_st *node;
+    node = find_(head,key,func);
+    if (node == &head->head){
+        return -1;
+    }else {
+        node->prev->next = node->next;
+        node->next->prev = node->prev;
+        data = node->data;
+        free(node->data);
+        free(node);
+        return 0;
+    }
+}
+
 void llist_destroy(LLIST *head) {
     struct llist_node_st *cur,*next;
 
     for (cur = head->head.next;cur != &head->head;cur = next) {
         next = cur->next;
         free(cur->data);
-        free(head);
+        free(cur);
     }
     free(head);
 }
-

@@ -1,6 +1,7 @@
 # 文件系统
 
 <hr/>
+
 ### 目标
 类似`ls`的实现
 
@@ -482,11 +483,259 @@ int main()
 
 - pmap (1)
 ### 库
-##### 动态库
+
+~~~ c
+#ifndef LLIST_H__
+#define LLIST_H__
+enum{
+    F = 1,
+    B = 2,
+};
+
+//普通节点
+struct llist_node_st{
+    void *data;
+    struct llist_node_st *prev;
+    struct llist_node_st *next;
+};
+//头节点
+typedef struct {
+    int size;
+    struct llist_node_st head;
+} LLIST; //LLIST就是一个双向链表的头节点类型，对于链表的操作都是用head来进行的
+
+//传入 每个数据节点的数据类型大小
+LLIST *llist_careate(int size);
+//传入 一个已经创好的链表的头节点，插入的数据，插入的模式
+int llist_insert(LLIST *,const void *data,int mode);
+//传入
+void *llist_find(LLIST *head,const void* ,int (*func)(const void*,const void*));
+//
+int llist_delete(LLIST *head,const void* ,int (*func)(const void*,const void*));
+//
+int llist_fetch(LLIST *head,const void* ,int (*func)(const void*,const void*),void *);
+//传入 一个已经创建好的链表头节点
+void llist_travel(LLIST* head,void (*func)(const void*));
+void llist_destroy(LLIST *);
+
+#endif
+~~~
+
+~~~ c
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "llist.h"
+
+
+//传入 每个数据节点的数据类型大小
+LLIST *llist_careate(int size){
+    LLIST *new;
+    new = malloc(sizeof(*new));
+    if (new == NULL){
+        return NULL;
+    }
+
+    new->size = size;
+    new->head.data = NULL;
+    new->head.prev = &new->head;
+    new->head.next = &new->head;
+    
+    return new;
+}
+//传入 一个已经创好的链表的头节点，插入的数据，插入的模式
+int llist_insert(LLIST *head,const void *data,int mode){
+    struct llist_node_st *newnode;
+    newnode = malloc(sizeof(*newnode));
+    if (newnode == NULL)
+      return -1;
+
+    newnode->data = malloc(head->size);
+    if (newnode->data == NULL){
+        return -2;
+    }
+    memcpy(newnode->data,data,head->size);
+
+    switch (mode) {
+        case F:
+            newnode->prev = &head->head;
+            newnode->next = head->head.next;
+            break;
+        case B:
+            newnode->prev = head->head.prev;
+            newnode->next = &head->head;
+            break;
+        default:
+            return -3;
+    }
+
+    newnode->prev->next = newnode;
+    newnode->next->prev = newnode;
+
+    return 0;
+
+}
+//传入 一个已经创建好的链表头节点,一个辅助遍历函数
+void llist_travel(LLIST* head,void (*func)(const void *)){
+    struct llist_node_st *cur,*next;
+    for (cur = head->head.next;cur != &head->head;cur = next) {
+        func(cur->data);
+        next = cur->next;
+    }
+}
+
+//辅助函数
+static struct llist_node_st *find_(LLIST *head,const void *key,int (*func)(const void *,const void *)){
+    struct llist_node_st *cur;
+    for (cur = head->head.next;cur != &head->head;cur = cur->next){
+        if (func(key,cur->data) == 0){
+            return cur;
+        }
+    }
+    return &head->head;
+}
+
+void *llist_find(LLIST *head,const void* key,int (*func)(const void*,const void*)){
+    return find_(head,key,func)->data;
+##### 静态库
+}
+
+//
+int llist_delete(LLIST *head,const void* key,int (*func)(const void*,const void*)){
+    struct llist_node_st *node;
+    node = find_(head,key,func);
+    if (node == &head->head){
+        return -1;
+    }else {
+        node->prev->next = node->next;
+        node->next->prev = node->prev;
+        free(node->data);
+        free(node);
+        return 0;
+    }
+}
+//
+int llist_fetch(LLIST *head,const void* key,int (*func)(const void*,const void*),void *data){
+    struct llist_node_st *node;
+    node = find_(head,key,func);
+    if (node == &head->head){
+        return -1;
+    }else {
+        node->prev->next = node->next;
+        node->next->prev = node->prev;
+        data = node->data;
+        free(node->data);
+        free(node);
+        return 0;
+    }
+}
+
+void llist_destroy(LLIST *head) {
+    struct llist_node_st *cur,*next;
+
+    for (cur = head->head.next;cur != &head->head;cur = next) {
+        next = cur->next;
+        free(cur->data);
+        free(cur);
+    }
+    free(head);
+}
+~~~
+
+~~~ c
+CFLAGS		+=-Wall -g -lstdc++ -D_FILE_OFFSET_BITS=64
+CC			=gcc
+TARGET		=DoubleLinkList
+OBJ			=llist.o
+src  		=llist.c
+
+$(TARGET):$(OBJ)
+	$(CC) main.c $(OBJ) -o $@
+
+$(OBJ):$(src)
+	$(CC) $(src) $(CFLAGS) -c -o $@
+	
+clean:
+	-rm -f $(OBJ)
+	-rm -f $(TARGET)
+~~~
 
 ##### 静态库
+- libxx.a xx指代库名
+- `ar -cr libxx.a yyy.o`
+- 发布到 `/usr/local/include` `/usr/local/lib`
+- 编译 `gcc -L/usr/local/lib -o main mian.o -lxx` **`-l`参数必须在最后，有依赖**
 
-#### 手工装载库
+~~~ bash
+make
+ar -cr libllist.a llist.o 
+ gcc -L./ -o main main.c -lllist 
+~~~
+##### 动态库
+- `libxx.so` xx是库名
+- `gcc -shared -fpic -o libxx.so yyy.c`
+- 发布到 `/usr/local/include` `/usr/local/lib` (.h 与 .so)
+- /sbin/ldconfig 重读 `/etc/ld.so.conf`
+- `gcc -I/usr/local/include -L/usr/local/lib -o ... lxx`
+
+**重名用动态库**
+- 非root用户发布
+    - sp xx.so ~/lib
+    - export LD_LIBRARY_PATH=~/lib
+
 ### 函数跳转
+    适用场景： 在树结构中查找元素，找到后直接回到第一次调用处(跨函数),不用一层一层返回
+- setjmp()
+- longjmp()
+
+~~~ c
+#include <stdio.h>
+#include <stdlib.h>
+#include <setjmp.h>
+
+static jmp_buf save;
+
+static void d(){
+    printf("%s is called\n",__FUNCTION__);
+    longjmp(save,2);
+    printf("%s is returned\n",__FUNCTION__);
+}
+
+
+static void c(){
+    printf("%s is called\n",__FUNCTION__);
+    d();
+    printf("%s is returned\n",__FUNCTION__);
+}
+
+
+static void b(){
+    printf("%s is called\n",__FUNCTION__);
+    c();
+    printf("%s is returned\n",__FUNCTION__);
+}
+
+static void a(){
+    int ret = setjmp(save);
+    if  (ret == 0) {
+        printf("%s is called\n",__FUNCTION__);
+        b();
+        printf("%s is returned\n",__FUNCTION__);
+    }else {
+        printf("code %d return \n",ret);
+    }
+}
+
+int main()
+{
+    a();
+    return 0;
+}
+
+~~~
 
 ### 资源的获取与控制
+- `getrlimit`
+- `setrlimit`
+

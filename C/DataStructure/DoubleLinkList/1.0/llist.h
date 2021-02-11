@@ -22,11 +22,13 @@ LLIST *llist_careate(int size);
 //传入 一个已经创好的链表的头节点，插入的数据，插入的模式
 int llist_insert(LLIST *,const void *data,int mode);
 //传入
-//llist_find();
-//llist_delete();
-//llist_fetch();
+void *llist_find(LLIST *head,const void* ,int (*func)(const void*,const void*));
+//
+int llist_delete(LLIST *head,const void* ,int (*func)(const void*,const void*));
+//
+int llist_fetch(LLIST *head,const void* ,int (*func)(const void*,const void*),void *);
 //传入 一个已经创建好的链表头节点
-void llist_travel(LLIST*);
+void llist_travel(LLIST* head,void (*func)(const void*));
 void llist_destroy(LLIST *);
 
 #endif

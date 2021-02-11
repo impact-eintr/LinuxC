@@ -1,4 +1,4 @@
-CFLAGS		+=-Wall -g -lstdc++ -D_FILE_OFFSET_BITS=64
+CFLAGS		+=-Wall -g -lstdc++ -ldl -D_FILE_OFFSET_BITS=64 -D_GUN_SOURCE
 CC			=gcc
 TARGET		=myls
 OBJ			=myls.o
