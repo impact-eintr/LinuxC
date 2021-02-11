@@ -78,6 +78,8 @@ int main()
 - vfork()
 
 ### 进程的消亡以及释放资源
+- wait()
+- waitpid()
 
 ### exec函数族
 
