@@ -10,7 +10,38 @@
 ### 进程的产生
 - fork() 
         - 注意理解关键字 duplicating 意味着拷贝 克隆 一模一样
-        - fork 后父子进程的区别 ： fork 的返回值不一样 pid不同 ppid也不同
+        - fork 后父子进程的区别 ： fork 的返回值不一样 pid不同 ppid也不同 未决信号与文🔓 不继承资源利用量清0
+        - init进程 是所以进程的祖先进程 pid == 1
+        - 调度器的调度策略来决定哪个进程先运行
+~~~ c
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+int main()
+{
+    printf("%d start !\n",getpid());
+    fflush(NULL);//记得刷新 否则begin放到缓冲区 父子进程的缓冲区里各有一句begin
+
+    pid_t pid = fork();
+
+    if (pid == 0){
+        printf("child %d\n",getpid());
+    }else{
+        printf("parent %d\n",getpid());
+    }
+    getchar();
+    printf("pid %d end\n",getpid());
+    return 0;
+}
+
+~~~
+
+~~~ c
+
+~~~
+
 - vfork()
 
 ### 进程的消亡以及释放资源
