@@ -9,6 +9,6 @@ ALL:$(obj)
 	gcc $< -o $(bin)$@ -g $(CFLAGS)
 
 clean:
-	-rm -i $(bin)$(obj)
+	-rm -i $(bin)*
 
 .PHONY:clean ALL
