@@ -1,8 +1,9 @@
-#include <asm-generic/errno-base.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <signal.h>
 #include <unistd.h>
+#include <sys/time.h>
 
 #include "mytbf.h"
 
@@ -16,6 +17,7 @@ struct mytbf_st{
 static struct mytbf_st *job[MYTBF_MAX];
 static volatile int inited = 0;
 static void (*alarm_status)(int);
+static struct itimerval old_itv;
 
 static int get_free_pos(){
     for (int i = 0;i < MYTBF_MAX;i++){
@@ -28,7 +30,16 @@ static int get_free_pos(){
 
 //信号处理函数
 static void handler(int sig){
-    alarm(1);
+    struct itimerval itv;
+
+    itv.it_interval.tv_sec = 1;
+    itv.it_interval.tv_usec = 0;
+    itv.it_value.tv_sec = 1;
+    itv.it_value.tv_usec = 0;
+    if(setitimer(ITIMER_REAL,&itv,NULL) < 0){
+        perror("setitimer()");
+        exit(1);
+    }
     for (int i = 0;i < MYTBF_MAX;i++){
         if (job[i] != NULL){
             job[i]->token += job[i]->csp;
@@ -42,12 +53,22 @@ static void handler(int sig){
 //装载信号处理模块
 static void mod_load(){
     alarm_status = signal(SIGALRM,handler);//保存alarm信号处理函数原来的状态
-    alarm(1);
+
+    struct itimerval itv;
+    itv.it_interval.tv_sec = 1;
+    itv.it_interval.tv_usec = 0;
+    itv.it_value.tv_sec = 1;
+    itv.it_value.tv_usec = 0;
+    if(setitimer(ITIMER_REAL,&itv,&old_itv) < 0){
+        perror("setitimer()");
+        exit(1);
+    }
 }
 //卸载信号处理模块 当发生异常退出时 可以将占用的资源释放 将alarm信号取消
 static void mod_unload(){
     signal(SIGALRM,alarm_status);
-    alarm(0);
+    setitimer(ITIMER_REAL,&old_itv,NULL);
+
     for (int i = 0;i < MYTBF_MAX;i++){
         free(job[i]);
     }
@@ -89,8 +110,9 @@ int mytbf_fetchtoken(mytbf_t *ptr,int size){
     }
     
     //有token继续
-    while (tbf->token <= 0)
-      pause();
+    while (tbf->token <= 0){
+        pause();
+    }
     
     int n =tbf->token<size?tbf->token:size;
 

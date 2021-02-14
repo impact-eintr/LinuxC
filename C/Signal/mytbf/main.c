@@ -7,11 +7,12 @@
 #include <errno.h>
 #include <string.h>
 #include <signal.h>
+#include <math.h>
 
 #include "mytbf.h"
 
 static const int SIZE = 1024;
-static const int CPS = 3;
+static const int CPS = 10;
 static const int BURST = 100;//最大令牌数
 
 static volatile int token = 0;//持有令牌数
@@ -49,11 +50,12 @@ int main(int argc,char** argv)
         
         int len,ret,pos = 0;
         int size = mytbf_fetchtoken(tbf,SIZE);
-        int i = 0;
-        while(i < 2){
-            sleep(1);
-            i++;
-        }
+        
+        //int i = 0;
+        //while(i < 2){
+        //    sleep(1);
+        //    i++;
+        //}
 
         if (size < 0){
             fprintf(stderr,"mytbf_fetchtoken()%s\n",strerror(-size));
@@ -67,7 +69,6 @@ int main(int argc,char** argv)
             strerror(errno);
             break;
         }
-        printf("\n%d\n",size);
 
         //读取结束
         if (len == 0){

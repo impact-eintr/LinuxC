@@ -215,16 +215,309 @@ while(loop){
 static volatile int loop = 1;
 ~~~
 
-#### 漏桶(流控算法)
-~~~ c
-
-~~~
 
 #### 令牌桶(优化后的流控算法)
 ~~~ c
+#ifndef MYTBF_H__
+#define MYTBF_H__
 
+#define MYTBF_MAX 1024
+
+typedef void mytbf_t;
+
+mytbf_t *mytbf_init(int cps,int burst);
+
+//获取token
+int mytbf_fetchtoken(mytbf_t *,int);
+//归还token
+int mytbf_returntoken(mytbf_t *,int);
+
+int mytbf_destroy(mytbf_t *);
+
+#endif
 ~~~
 
+~~~ c
+#include <asm-generic/errno-base.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <signal.h>
+#include <unistd.h>
+
+#include "mytbf.h"
+
+struct mytbf_st{
+    int csp;
+    int burst;
+    int token;
+    int pos;//任务列表的下标
+};
+
+static struct mytbf_st *job[MYTBF_MAX];
+static volatile int inited = 0;
+static void (*alarm_status)(int);
+
+static int get_free_pos(){
+    for (int i = 0;i < MYTBF_MAX;i++){
+        if (job[i] == NULL)
+          return  i;
+    }
+    return -1;
+}
+
+
+//信号处理函数
+static void handler(int sig){
+    alarm(1);
+    for (int i = 0;i < MYTBF_MAX;i++){
+        if (job[i] != NULL){
+            job[i]->token += job[i]->csp;
+            if (job[i]->token > job[i]->burst){
+                job[i]->token = job[i]->burst;
+            }
+        }
+    }
+}
+
+//装载信号处理模块
+static void mod_load(){
+    alarm_status = signal(SIGALRM,handler);//保存alarm信号处理函数原来的状态
+    alarm(1);
+}
+//卸载信号处理模块 当发生异常退出时 可以将占用的资源释放 将alarm信号取消
+static void mod_unload(){
+    signal(SIGALRM,alarm_status);
+    alarm(0);
+    for (int i = 0;i < MYTBF_MAX;i++){
+        free(job[i]);
+    }
+}
+
+mytbf_t *mytbf_init(int cps,int burst){
+    struct mytbf_st *tbf;
+
+    if (!inited){
+        mod_load();
+    }
+
+    //将新的tbf装载到任务组中
+    int pos;
+    pos = get_free_pos();
+    if (pos == -1){
+        return NULL;
+    }
+
+    tbf = malloc(sizeof(*tbf));
+    if (tbf == NULL)
+        return NULL;
+    tbf->token = 0;
+    tbf->csp = cps;
+    tbf->burst = burst;
+    tbf->pos = pos;
+    
+    job[pos] = tbf;
+
+    return tbf;
+}
+
+//获取token ptr是一个 void * size是用户想要获取的token数
+int mytbf_fetchtoken(mytbf_t *ptr,int size){
+    struct mytbf_st *tbf = ptr;
+
+    if (size <= 0){
+        return -EINVAL;
+    }
+    
+    //有token继续
+    while (tbf->token <= 0)
+      pause();
+    
+    int n =tbf->token<size?tbf->token:size;
+
+    tbf->token -= n;
+    //用户获取了 n 个token
+    return n;
+}
+
+//归还token ptr是一个 void *
+int mytbf_returntoken(mytbf_t *ptr,int size){
+    struct mytbf_st *tbf = ptr;
+
+    if (size <= 0){
+        return -EINVAL;
+    }
+    
+    tbf->token += size;
+    if (tbf->token > tbf->burst)
+        tbf->token = tbf->burst;
+
+    return size;
+}
+
+int mytbf_destroy(mytbf_t *ptr){
+    struct mytbf_st *tbf = ptr;
+    job[tbf->pos] = NULL;
+    free(tbf);
+    return 0;
+}
+~~~
+
+~~~ c
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <errno.h>
+#include <string.h>
+#include <signal.h>
+#include <math.h>
+
+#include "mytbf.h"
+
+static const int SIZE = 1024;
+static const int CPS = 3;
+static const int BURST = 100;//最大令牌数
+
+static volatile int token = 0;//持有令牌数
+
+int main(int argc,char** argv)
+{
+    if (argc < 2){
+        fprintf(stdout,"Usage...");
+        exit(1);
+    }
+
+    mytbf_t *tbf;
+
+    tbf = mytbf_init(CPS,BURST);
+    if (tbf == NULL){
+        fprintf(stderr,"tbf init error");
+        exit(1);
+    }
+
+    //打开文件
+    int sfd,dfd = 0;
+    do{
+        sfd = open(argv[1],O_RDONLY);
+        if (sfd < 0){
+            if (errno == EINTR)
+              continue;
+            fprintf(stderr,"%s\n",strerror(errno));
+            exit(1);
+        }
+    }while(sfd < 0);
+
+    char buf[SIZE];
+    
+    while(1){
+        
+        int len,ret,pos = 0;
+        int size = mytbf_fetchtoken(tbf,SIZE);
+        
+        int i = 0;
+        while(i < 2){
+            sleep(1);
+            i++;
+        }
+
+        if (size < 0){
+            fprintf(stderr,"mytbf_fetchtoken()%s\n",strerror(-size));
+            exit(1);
+        }
+
+        len = read(sfd,buf,size);
+        while (len < 0){
+            if (errno == EINTR)
+              continue;
+            strerror(errno);
+            break;
+        }
+
+        //读取结束
+        if (len == 0){
+            break;
+        }
+
+        //要是读到结尾没用完token
+        if (size - len > 0){
+            mytbf_returntoken(tbf,size-len);
+        }
+
+        //以防写入不足
+        while(len > 0){
+            ret = write(dfd,buf+pos,len);
+            while (ret < 0){
+                if (errno == EINTR){
+                  continue;
+                }
+                printf("%s\n",strerror(errno));
+                exit(1);
+            }
+
+            pos += ret;
+            len -= ret;
+        }
+    }
+
+    close(sfd);
+    mytbf_destroy(tbf);
+
+    exit(0);
+}
+
+~~~
+- setitimer()
+~~~ c
+//信号处理函数
+static void handler(int sig){
+    struct itimerval itv;
+
+    itv.it_interval.tv_sec = 1;
+    itv.it_interval.tv_usec = 0;
+    itv.it_value.tv_sec = 1;
+    itv.it_value.tv_usec = 0;
+    if(setitimer(ITIMER_REAL,&itv,NULL) < 0){
+        perror("setitimer()");
+        exit(1);
+    }
+    for (int i = 0;i < MYTBF_MAX;i++){
+        if (job[i] != NULL){
+            job[i]->token += job[i]->csp;
+            if (job[i]->token > job[i]->burst){
+                job[i]->token = job[i]->burst;
+            }
+        }
+    }
+}
+
+//装载信号处理模块
+static void mod_load(){
+    alarm_status = signal(SIGALRM,handler);//保存alarm信号处理函数原来的状态
+
+    struct itimerval itv;
+    itv.it_interval.tv_sec = 1;
+    itv.it_interval.tv_usec = 0;
+    itv.it_value.tv_sec = 1;
+    itv.it_value.tv_usec = 0;
+    if(setitimer(ITIMER_REAL,&itv,&old_itv) < 0){
+        perror("setitimer()");
+        exit(1);
+    }
+}
+//卸载信号处理模块 当发生异常退出时 可以将占用的资源释放 将alarm信号取消
+static void mod_unload(){
+    signal(SIGALRM,alarm_status);
+    setitimer(ITIMER_REAL,&old_itv,NULL);
+
+    for (int i = 0;i < MYTBF_MAX;i++){
+        free(job[i]);
+    }
+}
+
+
+~~~
 - abort
 - system()
 
