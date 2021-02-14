@@ -520,17 +520,105 @@ static void mod_unload(){
 ~~~
 - abort
 - system()
-
+**在有信号参与的程序当中，要阻塞住一个信号，要忽略调两个信号 这样system()才能正常使用 **
 #### sleep的缺陷
-
+**在某些平台，`sleep()`是使用`alarm`+`pause`封装的，而程序中出现多于1个的`alarm`alarm将失效**
 ## 信号集
+- sigset_t 信号集类型
+- sigemptyset()
+- sigfillset()
+- sigaddset()
+- sigdelset()
+- sigismember()
 
 ## 信号屏蔽字/pending集的处理
+- sigprocmask()
+**我们无法控制信号何时到来，但可以选择如何响应它**
 
+~~~ c
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <unistd.h>
+
+#define N 5
+
+void handler(int sig){
+    write(1,"S",1);
+}
+
+
+int main()
+{
+    int i;
+
+    sigset_t sigset,old_sigset,sigset_status;
+    sigemptyset(&sigset);
+    sigaddset(&sigset,SIGINT);
+
+    signal(SIGINT,handler);
+    
+    //保存进入该模块前的状态
+    sigprocmask(SIG_UNBLOCK,&sigset_status,NULL);
+    while(1){
+        sigprocmask(SIG_BLOCK,&sigset,&old_sigset);
+        for (i = 0;i < N;i++){
+            write(1,"*",1);
+            sleep(1);
+        }
+        write(1,"\n",1);
+        sigprocmask(SIG_SETMASK,&old_sigset,NULL);
+    }
+    //恢复进入该模块前的状态
+    sigprocmask(SIG_SETMASK,&sigset_status,NULL);
+
+    exit(0);
+}
+~~~
 
 ## 扩展
-- sigsuspend()
-- sigaction()
-- setitimer()
+- sigsuspend() 信号驱动
+~~~ c
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <unistd.h>
+
+#define N 5
+
+void handler(int sig){
+    write(1,"S",1);
+}
+
+
+int main()
+{
+    int i;
+
+    sigset_t sigset,old_sigset,sigset_status;
+    sigemptyset(&sigset);
+    sigaddset(&sigset,SIGINT);
+
+    signal(SIGINT,handler);
+    
+    //保存进入该模块前的状态
+    sigprocmask(SIG_UNBLOCK,&sigset_status,NULL);
+    sigprocmask(SIG_BLOCK,&sigset,&old_sigset);
+    while(1){
+        for (i = 0;i < N;i++){
+            write(1,"*",1);
+            sleep(1);
+        }
+        write(1,"\n",1);
+        sigsuspend(&old_sigset);
+    }
+    //恢复进入该模块前的状态
+    sigprocmask(SIG_SETMASK,&sigset_status,NULL);
+
+    exit(0);
+}
+~~~
+
+- sigaction() 用来替换signal()
 
 ## 实时信号
