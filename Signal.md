@@ -619,6 +619,78 @@ int main()
 }
 ~~~
 
-- sigaction() 用来替换signal()
+- sigaction() 用来替换signal() 还可以指定信号的来源以选择是否响应
+~~~ c
+//信号处理函数
+static void handler(int sig,siginfo_t *infop,void *unused){
+    struct itimerval itv;
+
+    if (infop->si_code != SI_KERNEL){
+        return ;
+    }
+
+    itv.it_interval.tv_sec = 1;
+    itv.it_interval.tv_usec = 0;
+    itv.it_value.tv_sec = 1;
+    itv.it_value.tv_usec = 0;
+    if(setitimer(ITIMER_REAL,&itv,NULL) < 0){
+        perror("setitimer()");
+        exit(1);
+    }
+    for (int i = 0;i < MYTBF_MAX;i++){
+        if (job[i] != NULL){
+            job[i]->token += job[i]->csp;
+            if (job[i]->token > job[i]->burst){
+                job[i]->token = job[i]->burst;
+            }
+        }
+    }
+}
+
+//装载信号处理模块
+static void mod_load(){
+    //alarm_status = signal(SIGALRM,handler);//保存alarm信号处理函数原来的状态
+    struct sigaction sa;
+    sa.sa_sigaction = handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_SIGINFO;
+
+    if (sigaction(SIGALRM,&sa,&old_sa) < 0){
+        perror("sigaction()");
+        exit(1);
+    }
+
+
+    struct itimerval itv;
+    itv.it_interval.tv_sec = 1;
+    itv.it_interval.tv_usec = 0;
+    itv.it_value.tv_sec = 1;
+    itv.it_value.tv_usec = 0;
+    if(setitimer(ITIMER_REAL,&itv,&old_itv) < 0){
+        perror("setitimer()");
+        exit(1);
+    }
+}
+//卸载信号处理模块 当发生异常退出时 可以将占用的资源释放 将alarm信号取消
+static void mod_unload(){
+   //signal(SIGALRM,alarm_status);
+   sigaction(SIGALRM,&old_sa,NULL);
+    
+    struct itimerval itv;
+    itv.it_interval.tv_sec = 0;
+    itv.it_interval.tv_usec = 0;
+    itv.it_value.tv_sec = 0;
+    itv.it_value.tv_usec = 0;
+    if(setitimer(ITIMER_REAL,&itv,&old_itv) < 0){
+        perror("setitimer()");
+        exit(1);
+    }
+
+    for (int i = 0;i < MYTBF_MAX;i++){
+        free(job[i]);
+    }
+}
+~~~
 
 ## 实时信号
+不会丢失 有顺序

@@ -4,10 +4,13 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <signal.h>
 #include <fcntl.h>
 #include <syslog.h>
 
 #define FNAME "/tmp/out"
+
+static FILE* fp;
 
 static int deamonize(){
     int fd;
@@ -27,7 +30,6 @@ static int deamonize(){
         return -1;
     }
     if (pid == 0){
-        printf("test");
         fflush(NULL);
         dup2(fd,0);
         dup2(fd,1);
@@ -43,16 +45,26 @@ static int deamonize(){
 }
 
 static void daemon_exit(int sig){
-
+    syslog(LOG_WARNING,"服务即将关闭!");
     closelog();
     fclose(fp);
-
 }
 
 int main()
 {
-    FILE* fp;
+    struct sigaction sa;
 
+    sa.sa_handler = daemon_exit;
+    sigemptyset(&sa.sa_mask);
+    sigaddset(&sa.sa_mask,SIGQUIT);
+    sigaddset(&sa.sa_mask,SIGTERM);
+    sigaddset(&sa.sa_mask,SIGINT);
+    sa.sa_flags = 0;
+
+    sigaction(SIGINT,&sa,NULL);
+    sigaction(SIGQUIT,&sa,NULL);
+    sigaction(SIGTERM,&sa,NULL);
+    
     //开启日志服务
     openlog("print i",LOG_PID,LOG_DAEMON);
 
