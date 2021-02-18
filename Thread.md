@@ -189,9 +189,540 @@ if (fd2 < 0){
 }
 ~~~
 
+- pthread_setcancelstate() 设置是否允许取消
+- pthread_testcancel() 什么都不做 本身就是一个取消点
+
 - 进程异常终止的条件之一
     - **最后一个线程对其取消请求作出响应**
+
+~~~ c
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <wait.h>
+#include <string.h>
+
+#define N 5
+#define LEFT 30000000
+#define RIGHT 30000200
+
+
+static void *handler(void *p){
+    int n = *(int *)p;
+    int i,j,mark;
+    for (i = LEFT+n;i <= RIGHT;i+=N){
+        mark = 1;
+        for (j = 2;j <= i/2;j++){
+            if (i%j == 0){
+                mark = 0;
+                break;
+            }
+        }
+        if (mark) {
+            printf("%d is a primer [%d]\n",i,n);
+        }
+    }
+    pthread_exit(p);
+
+}
+
+//交叉算法计算 池类算法涉及到竞争
+int main()
+{
+    pthread_t Ptid[N];
+    void *ptr = NULL;
+
+    for (int n = 0;n < N;n++){
+        int *num = malloc(sizeof(int));
+        *num = n;
+        int err = pthread_create(Ptid+n,NULL,handler,num);
+        if (err){
+            fprintf(stderr,"%s\n",strerror(err));
+            exit(1);
+        }
+    }
+
+    int n;
+    for (n =0 ;n < N;n++){
+        pthread_join(Ptid[n],ptr);
+        free(ptr);
+    }
+
+    exit(0);
+}
+
+~~~
+
 ## 线程同步
+#### 互斥量
+
+**锁住的是一段代码而不是一个变量**
+- pthread_mutex_t
+- pthread_mutex_init()
+- pthread_mutex_destory()
+- pthread_mutex_lock()
+- pthread_mutex_trylock()
+- pthread_mutex_unlock()
+- pthread_once() **动态模块的单词初始化函数**
+
+~~~ c
+//互斥量
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static void *handler(void *p){
+    FILE *fp = fopen(FNAME,"r+");
+    char buf[BUFSIZE];
+
+    if(fp == NULL){
+        perror("fopen()");
+        exit(1);
+    }
+
+    //进入临界区
+    pthread_mutex_lock(&mutex);
+    fgets(buf,BUFSIZE,fp);
+    fseek(fp,0,SEEK_SET);
+    sleep(1);
+    fprintf(fp,"%d\n",atoi(buf)+1);
+    fclose(fp);
+    pthread_mutex_unlock(&mutex);
+    //离开临界区
+
+    pthread_exit(NULL);
+}
+
+int main()
+{
+    pthread_t Ptid[THRNUM];
+
+    for (int i = 0;i < THRNUM;i++){
+        int err = pthread_create(Ptid+i,NULL,handler,NULL);
+        if (err){
+           fprintf(stderr,"%s\n",strerror(err));
+           exit(1);
+        }
+    }
+
+    for (int i = 0;i < THRNUM;i++){
+        pthread_join(Ptid[i],NULL);
+    }
+
+    pthread_mutex_destroy(&mutex);
+
+    return 0;
+}
+
+~~~
+
+~~~ c
+//循环打印 abcd
+#define N 4
+#define LEFT 30000000
+#define RIGHT 30000200
+
+static pthread_mutex_t mutex_arr[N];
+
+
+static void *handler(void *p){
+    int n = *(int *)p;
+    int ch = '1'+n;
+
+    while(1){
+        pthread_mutex_lock(mutex_arr+n);
+        write(1,&ch,1);
+        pthread_mutex_unlock(mutex_arr+(n+1)%N);
+    }
+    pthread_exit(p);
+}
+
+int main()
+{
+    pthread_t Ptid[N];
+    void *ptr = NULL;
+
+    for (int n = 0;n < N;n++){
+        int *num = malloc(sizeof(int));
+        *num = n;
+
+        pthread_mutex_init(mutex_arr+n,NULL);
+        pthread_mutex_lock(mutex_arr+n);
+
+        int err = pthread_create(Ptid+n,NULL,handler,num);
+        if (err){
+            fprintf(stderr,"%s\n",strerror(err));
+            exit(1);
+        }
+    }
+
+    pthread_mutex_unlock(mutex_arr+0);
+    alarm(3) ;   
+
+    int n;
+    for (n =0 ;n < N;n++){
+        pthread_join(Ptid[n],ptr);
+        free(ptr);
+    }
+
+    exit(0);
+}
+
+~~~
+
+~~~ c
+//池类算法算质数
+#define THRNUM 3
+#define LEFT 30000000
+#define RIGHT 30000200
+
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;;
+static int num = 0;
+
+static void *handler(void *p){
+    int task,mark;
+
+    while(1){
+        pthread_mutex_lock(&mutex);
+        while(num == 0){
+            pthread_mutex_unlock(&mutex);
+            sched_yield();
+            pthread_mutex_lock(&mutex);
+        }
+    
+        if (num == -1){
+            pthread_mutex_unlock(&mutex);
+            break;
+        }
+
+        task = num;
+        num = 0;//成功领取任务
+        pthread_mutex_unlock(&mutex);
+
+        mark = 1;
+        for (int j = 2;j <= task/2;j++){
+            if (task%j == 0){
+                mark = 0;
+                break;
+            }
+        }
+        if (mark) {
+            printf("[%d] %d is a priamer\n",(int)p,task);
+        }
+    }
+
+    pthread_exit(NULL);
+}
+
+//池类算法
+int main()
+{
+    pthread_t Ptid[THRNUM];
+
+    for (int n = 0;n < THRNUM;n++){
+        int err = pthread_create(Ptid+n,NULL,handler,(void *)n);
+        if (err){
+            fprintf(stderr,"%s\n",strerror(err));
+            exit(1);
+        }
+    }
+
+    for (int i = LEFT;i <= RIGHT;i++){
+        pthread_mutex_lock(&mutex);
+        
+        //任务没有被领取
+        while(num != 0){
+            pthread_mutex_unlock(&mutex);
+            sched_yield();
+            pthread_mutex_lock(&mutex);
+        }
+        //任务已经成功下发
+        num = i;
+        pthread_mutex_unlock(&mutex);
+    }
+    
+    pthread_mutex_lock(&mutex);
+    //任务没有被领取
+    while(num != 0){
+        pthread_mutex_unlock(&mutex);
+        sched_yield();
+        pthread_mutex_lock(&mutex);
+    }
+    //任务已经成功下发
+    num = -1;
+    pthread_mutex_unlock(&mutex);
+
+    int n;
+    for (n =0 ;n < THRNUM;n++){
+        pthread_join(Ptid[n],NULL);
+    }
+
+    pthread_mutex_destroy(&mutex);
+
+    exit(0);
+}
+
+~~~
+**头文件 与 测试主函数 请见信号篇的 令牌桶**
+~~~ c
+//令牌桶
+struct mytbf_st{
+    int csp;
+    int burst;
+    int token;
+    int pos;//任务列表的下标
+    pthread_mutex_t mut;
+};
+
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_t ptid;
+static pthread_once_t pth_once = PTHREAD_ONCE_INIT;
+
+static struct mytbf_st *job[MYTBF_MAX];
+static volatile int inited = 0;
+
+static int get_free_pos_unlocked(){
+    for (int i = 0;i < MYTBF_MAX;i++){
+        if (job[i] == NULL)
+          return  i;
+    }
+    return -1;
+}
+
+//线程处理函数
+static void *handler(void *p){
+    struct timespec ts;
+    ts.tv_sec = 1;
+    ts.tv_nsec = 0;
+
+    while(1){
+        pthread_mutex_lock(&mutex);
+        for (int i = 0;i < MYTBF_MAX;i++){
+            if (job[i] != NULL){
+                pthread_mutex_lock(&job[i]->mut);
+                job[i]->token += job[i]->csp;
+                if (job[i]->token > job[i]->burst){
+                    job[i]->token = job[i]->burst;
+                }
+                pthread_mutex_unlock(&job[i]->mut);
+            }
+        }
+        pthread_mutex_unlock(&mutex);
+        nanosleep(&ts,NULL);
+
+    }
+    pthread_exit(NULL);
+}
+
+//卸载线程处理模块
+static void mod_unload(){
+    pthread_cancel(ptid);
+    pthread_join(ptid,NULL);
+    for (int i = 0;i < MYTBF_MAX;i++){
+        if (job[i] != NULL){
+            mytbf_destroy(job[i]);
+        }
+        free(job[i]);
+    }
+
+    pthread_mutex_destroy(&mutex);
+}
+
+//装载线程处理模块
+static void mod_load(){
+
+    int err = pthread_create(&ptid,NULL,handler,NULL);
+    if (err){
+        fprintf(stderr,"%s\n",strerror(err));
+    }
+
+    atexit(mod_unload);
+}
+
+mytbf_t *mytbf_init(int cps,int burst){
+    struct mytbf_st *tbf;
+
+    pthread_once(&pth_once,mod_load);
+
+    tbf = malloc(sizeof(*tbf));
+    if (tbf == NULL){
+        return NULL;
+    }
+    tbf->token = 0;
+    tbf->csp = cps;
+    tbf->burst = burst;
+    pthread_mutex_init(&tbf->mut,NULL);
+
+    pthread_mutex_lock(&mutex);
+    //将新的tbf装载到任务组中
+    int pos = get_free_pos_unlocked();
+    if (pos == -1){
+        free(tbf);
+        pthread_mutex_unlock(&mutex);
+        return NULL;
+    }
+
+    tbf->pos = pos;
+    job[pos] = tbf;
+    
+    pthread_mutex_unlock(&mutex);
+
+    return tbf;
+}
+
+//获取token ptr是一个 void * size是用户想要获取的token数
+int mytbf_fetchtoken(mytbf_t *ptr,int size){
+    struct mytbf_st *tbf = ptr;
+
+    if (size <= 0){
+        return -EINVAL;
+    }
+    
+    //有token继续
+    pthread_mutex_lock(&tbf->mut);
+    while (tbf->token <= 0){
+        pthread_mutex_unlock(&tbf->mut);
+        sched_yield();
+        pthread_mutex_lock(&tbf->mut);
+    }
+
+    int n =tbf->token<size?tbf->token:size;
+    tbf->token -= n;
+
+    pthread_mutex_unlock(&tbf->mut);
+    //用户获取了 n 个token
+    return n;
+}
+
+//归还token ptr是一个 void *
+int mytbf_returntoken(mytbf_t *ptr,int size){
+    struct mytbf_st *tbf = ptr;
+
+    if (size <= 0){
+        return -EINVAL;
+    }
+    pthread_mutex_lock(&tbf->mut);
+    tbf->token += size;
+    if (tbf->token > tbf->burst)
+        tbf->token = tbf->burst;
+    pthread_mutex_unlock(&tbf->mut);
+
+    return size;
+}
+
+int mytbf_destroy(mytbf_t *ptr){
+    struct mytbf_st *tbf = ptr;
+    pthread_mutex_lock(&mutex);
+    job[tbf->pos] = NULL;
+    pthread_mutex_unlock(&mutex);
+
+    pthread_mutex_destroy(&tbf->mut);
+    free(tbf);
+    return 0;
+}
+~~~
+
+#### 条件变量
+
+- pthread_cond_t
+- pthread_cond_init()
+- pthread_cond_destory()
+- pthread_cond_wait() **等通知 + 抢锁**
+- pthread_cond_broadcast() 广播给所有线程
+- pthread_cond_signal() 通知任意一个线程
+
+~~~ c
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;;
+static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;;
+static int num = 0;
+
+static void *handler(void *p){
+    int task,mark;
+
+    while(1){
+        pthread_mutex_lock(&mutex);
+        while(num == 0){
+            pthread_cond_wait(&cond,&mutex);
+        }
+    
+        if (num == -1){
+            pthread_mutex_unlock(&mutex);
+            break;
+        }
+
+        task = num;
+        num = 0;//成功领取任务
+        //通知所有线程任务被领取走了
+        pthread_cond_broadcast(&cond);
+        pthread_mutex_unlock(&mutex);
+
+        mark = 1;
+        for (int j = 2;j <= task/2;j++){
+            if (task%j == 0){
+                mark = 0;
+                break;
+            }
+        }
+        if (mark) {
+            printf("[%d] %d is a priamer\n",*(int *)p,task);
+        }
+    }
+
+    pthread_exit(NULL);
+}
+
+//池类算法
+int main()
+{
+    pthread_t Ptid[THRNUM];
+
+    for (int n = 0;n < THRNUM;n++){
+        int *num = malloc(sizeof(int));
+        *num = n;
+        int err = pthread_create(Ptid+n,NULL,handler,num);
+        if (err){
+            fprintf(stderr,"%s\n",strerror(err));
+            exit(1);
+        }
+    }
+
+    for (int i = LEFT;i <= RIGHT;i++){
+        pthread_mutex_lock(&mutex);
+        
+        //任务没有被领取
+        while(num != 0){
+            pthread_cond_wait(&cond,&mutex);
+        }
+        //任务已经成功下发
+        num = i;
+        //叫醒任意一个线程执行任务
+        pthread_cond_signal(&cond);
+        pthread_mutex_unlock(&mutex);
+    }
+    
+    pthread_mutex_lock(&mutex);
+    //任务没有被领取
+    while(num != 0){
+        pthread_cond_wait(&cond,&mutex);
+    }
+    //任务已经成功下发
+    num = -1;
+    //广播给所有下游线程 任务结束
+    pthread_cond_broadcast(&cond);
+    pthread_mutex_unlock(&mutex);
+
+    int n;
+    for (n =0 ;n < THRNUM;n++){
+        pthread_join(Ptid[n],NULL);
+    }
+
+    pthread_mutex_destroy(&mutex);
+    pthread_cond_destroy(&cond);
+
+    exit(0);
+}
+
+~~~
 
 ## 线程属性
 ### 线程同步的属性

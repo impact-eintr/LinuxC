@@ -54,6 +54,26 @@ static void handler(int sig,siginfo_t *infop,void *unused){
     }
 }
 
+//卸载信号处理模块 当发生异常退出时 可以将占用的资源释放 将alarm信号取消
+static void mod_unload(){
+   //signal(SIGALRM,alarm_status);
+   sigaction(SIGALRM,&old_sa,NULL);
+    
+    struct itimerval itv;
+    itv.it_interval.tv_sec = 0;
+    itv.it_interval.tv_usec = 0;
+    itv.it_value.tv_sec = 0;
+    itv.it_value.tv_usec = 0;
+    if(setitimer(ITIMER_REAL,&itv,&old_itv) < 0){
+        perror("setitimer()");
+        exit(1);
+    }
+
+    for (int i = 0;i < MYTBF_MAX;i++){
+        free(job[i]);
+    }
+}
+
 //装载信号处理模块
 static void mod_load(){
     //alarm_status = signal(SIGALRM,handler);//保存alarm信号处理函数原来的状态
@@ -77,25 +97,7 @@ static void mod_load(){
         perror("setitimer()");
         exit(1);
     }
-}
-//卸载信号处理模块 当发生异常退出时 可以将占用的资源释放 将alarm信号取消
-static void mod_unload(){
-   //signal(SIGALRM,alarm_status);
-   sigaction(SIGALRM,&old_sa,NULL);
-    
-    struct itimerval itv;
-    itv.it_interval.tv_sec = 0;
-    itv.it_interval.tv_usec = 0;
-    itv.it_value.tv_sec = 0;
-    itv.it_value.tv_usec = 0;
-    if(setitimer(ITIMER_REAL,&itv,&old_itv) < 0){
-        perror("setitimer()");
-        exit(1);
-    }
-
-    for (int i = 0;i < MYTBF_MAX;i++){
-        free(job[i]);
-    }
+    atexit(mod_unload);
 }
 
 mytbf_t *mytbf_init(int cps,int burst){
