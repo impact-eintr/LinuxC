@@ -7,18 +7,23 @@
 #include <wait.h>
 #include <string.h>
 
-#define THRNUM 12
-#define LEFT 30000000
+#include "mysem.h"
+
+#define THRNUM 200
+#define N 5
+#define LEFT 30000001
 #define RIGHT 30000200
 
-static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;;
-static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;;
+static mysem_t *sem;
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 static int num = 0;
 
 static void *handler(void *p){
-    int task,mark;
+    int task,mark,count = 0;
 
     while(1){
+
         pthread_mutex_lock(&mutex);
         while(num == 0){
             pthread_cond_wait(&cond,&mutex);
@@ -44,7 +49,15 @@ static void *handler(void *p){
         if (mark) {
             printf("[%d] %d is a priamer\n",*(int *)p,task);
         }
+        count++;
+        if (count == 1){
+            sleep(1);
+            break;
+        }
     }
+
+    //归还计算资源
+    mysem_add(sem,1);
 
     pthread_exit(NULL);
 }
@@ -53,18 +66,18 @@ static void *handler(void *p){
 int main()
 {
     pthread_t Ptid[THRNUM];
+    sem = mysem_init(N);//初始化计算资源
 
-    for (int n = 0;n < THRNUM;n++){
-        int *num = malloc(sizeof(int));
-        *num = n;
-        int err = pthread_create(Ptid+n,NULL,handler,num);
+    for (int i = LEFT;i <= RIGHT;i++){
+        mysem_sub(sem,1);//消耗一个计算资源
+        int *ptid = malloc(sizeof(int));
+        *ptid = i-LEFT;
+        int err = pthread_create(Ptid+(i-LEFT),NULL,handler,ptid);
         if (err){
             fprintf(stderr,"%s\n",strerror(err));
             exit(1);
         }
-    }
 
-    for (int i = LEFT;i <= RIGHT;i++){
         pthread_mutex_lock(&mutex);
         
         //任务没有被领取

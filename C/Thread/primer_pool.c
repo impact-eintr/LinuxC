@@ -7,8 +7,8 @@
 #include <wait.h>
 #include <string.h>
 
-#define THRNUM 12
-#define LEFT 30000000
+#define THRNUM 50
+#define LEFT 30000001
 #define RIGHT 30000200
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;;
@@ -16,7 +16,7 @@ static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;;
 static int num = 0;
 
 static void *handler(void *p){
-    int task,mark;
+    int task,mark,count = 0;
 
     while(1){
         pthread_mutex_lock(&mutex);
@@ -28,6 +28,7 @@ static void *handler(void *p){
             pthread_mutex_unlock(&mutex);
             break;
         }
+
 
         task = num;
         num = 0;//成功领取任务
@@ -43,6 +44,10 @@ static void *handler(void *p){
         }
         if (mark) {
             printf("[%d] %d is a priamer\n",*(int *)p,task);
+        }
+        count++;
+        if (count == 5){
+            break;
         }
     }
 

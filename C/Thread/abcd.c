@@ -11,7 +11,7 @@
 #define RIGHT 30000200
 
 static pthread_mutex_t mutex_arr[N];
-static pthread_cond_t cond;
+//static pthread_cond_t cond;
 
 static void *handler(void *p){
     int n = *(int *)p;

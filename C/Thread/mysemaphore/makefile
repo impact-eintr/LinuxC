@@ -2,10 +2,10 @@ all:mysem
 CFLAGS += -Wall -g
 LDFLAGS += -lpthread -lstdc++ 
 
-mytbf:main.c mytbf.o
+mysem:main.c mysem.o
 	gcc $^ $(CFLAGS) $(LDFLAGS) -o $@
 
-mytbf.o:mytbf.c
+mysem.o:mysem.c
 	gcc $^ $(CFLAGS) $(LDFLAGS) -c -o $@
 clean:
 	rm -rf *.o mysem

@@ -267,6 +267,8 @@ int main()
 - pthread_mutex_unlock()
 - pthread_once() **动态模块的单词初始化函数**
 
+互斥量像是`bool`，非黒即白，没有共享性
+
 ~~~ c
 //互斥量
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -631,6 +633,8 @@ int mytbf_destroy(mytbf_t *ptr){
 - pthread_cond_broadcast() 广播给所有线程
 - pthread_cond_signal() 通知任意一个线程
 
+条件变量可以解决 互斥量进行盲等的问题 即实现了通知法，**通知互斥量什么时候上锁**
+
 ~~~ c
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;;
 static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;;
@@ -721,6 +725,182 @@ int main()
 
     exit(0);
 }
+
+~~~
+
+#### 信号量
+
+**通过互斥量与条件变量的配合我们可以实现信号量 信号量像是一个激活函数 当这个变量超过阈值时 将会触发条件变量给互斥量上锁**
+
+~~~ c
+#include "mysem.h"
+
+struct mysem_st{
+    int vaclue;
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
+};
+
+mysem_t *mysem_init(int initval){
+    struct mysem_st *sem;
+    sem = malloc(sizeof(*sem));
+
+    if (sem == NULL){
+        return NULL;
+    }
+    
+    sem->vaclue = initval;
+    pthread_mutex_init(&sem->mutex,NULL);
+    pthread_cond_init(&sem->cond,NULL);
+
+    return sem;
+}
+
+int mysem_add(mysem_t *ptr,int n){
+
+    struct mysem_st *sem = ptr;
+
+    pthread_mutex_lock(&sem->mutex);
+    sem->vaclue += n;
+    pthread_cond_broadcast(&sem->cond);
+    pthread_mutex_unlock(&sem->mutex);
+
+    return n;
+}
+
+int mysem_sub(mysem_t *ptr,int n){
+    struct mysem_st *sem = ptr;
+
+    pthread_mutex_lock(&sem->mutex);
+
+    while(sem->vaclue < n){
+        pthread_cond_wait(&sem->cond,&sem->mutex);
+    }
+    sem->vaclue -= n;
+    pthread_mutex_unlock(&sem->mutex);
+    
+    return n;
+}
+
+int mysem_destory(mysem_t *ptr){
+    struct mysem_st *sem = ptr;
+
+    pthread_mutex_destroy(&sem->mutex);
+    pthread_cond_destroy(&sem->cond);
+    free(sem);
+
+    return 0;
+}
+
+~~~
+
+~~~ c
+
+#define THRNUM 20
+#define N 5
+#define LEFT 30000000
+#define RIGHT 30000200
+
+static mysem_t *sem;
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;;
+static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;;
+static int num = 0;
+
+static void *handler(void *p){
+    int task,mark= 0;
+
+    pthread_mutex_lock(&mutex);
+    while(num == 0){
+        pthread_cond_wait(&cond,&mutex);
+    }
+    
+    if (num == -1){
+        pthread_mutex_unlock(&mutex);
+        mysem_add(sem,1);
+        pthread_exit(NULL);
+    }
+
+    task = num;
+    num = 0;//成功领取任务
+    pthread_cond_broadcast(&cond);
+    pthread_mutex_unlock(&mutex);
+
+    mark = 1;
+    for (int j = 2;j <= task/2;j++){
+        if (task%j == 0){
+            mark = 0;
+            //归还计算资源
+            sleep(1);
+            mysem_add(sem,1);
+            pthread_exit(NULL);
+        }
+    }
+    if (mark) {
+        printf("[%d] %d is a priamer\n",*(int *)p,task);
+    }
+
+    sleep(1);
+
+    //归还计算资源
+    mysem_add(sem,1);
+
+    pthread_exit(NULL);
+}
+
+//池类算法
+int main()
+{
+    pthread_t Ptid[THRNUM];
+    sem = mysem_init(N);//初始化计算资源
+
+    for (int i = LEFT;i <= RIGHT;i++){
+        mysem_sub(sem,1);//消耗一个计算资源
+        int *ptid = malloc(sizeof(int));
+        *ptid = i-LEFT;
+        int err = pthread_create(Ptid+(i-LEFT)%THRNUM,NULL,handler,ptid);
+        if (err){
+            fprintf(stderr,"%s\n",strerror(err));
+            exit(1);
+        }
+
+        pthread_mutex_lock(&mutex);
+        
+        //任务没有被领取
+        while(num != 0){
+            pthread_cond_wait(&cond,&mutex);
+        }
+        //任务已经成功下发
+        num = i;
+        pthread_cond_signal(&cond);
+        pthread_mutex_unlock(&mutex);
+    }
+    
+    pthread_mutex_lock(&mutex);
+    //任务没有被领取
+    while(num != 0){
+        pthread_cond_wait(&cond,&mutex);
+    }
+    //任务已经成功下发
+    num = -1;
+    pthread_cond_broadcast(&cond);
+    pthread_mutex_unlock(&mutex);
+
+    int n;
+    for (n =0 ;n < THRNUM;n++){
+        pthread_join(Ptid[n],NULL);
+    }
+
+    pthread_mutex_destroy(&mutex);
+    pthread_cond_destroy(&cond);
+
+    exit(0);
+}
+
+~~~
+
+#### 读写锁
+
+~~~ c
 
 ~~~
 
