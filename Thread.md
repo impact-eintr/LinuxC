@@ -905,12 +905,53 @@ int main()
 ~~~
 
 ## 线程属性
-### 线程同步的属性
+- pthread_attr_init()
+- pthread_attr_destory()
+- pthread_attr_setstacksize()
+其他请见 `man pthread_attr_init` 的 `see also`
 
-## 重入
+### 线程同步的属性
+#### 互斥量属性
+- pthread_mutexattr_init()
+- pthread_mutexattr_destory()
+- **clone** 进程 线程 不分家a
+    - 跨进程设置锁
+    - pthread_mutexattr_getshared()
+    - pthread_mutexattr_setshared()
+- pthread_mutexattr_gettype()
+- pthread_mutexattr_settype()
+
+#### 条件变量属性
+- pthread_condattr_init()
+- pthread_condattr_destory()
+
+### 重入(reentry)
+#### 多线程中的IO
+- getchar_unlocked
 
 ### 线程与信号
+- pthread_sigmask()
+- sigwait()
+- pthread_kill()
+
+## openmp
+
+~~~ c
+#include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
 
 
-### 线程与fork
+int main()
+{
+#pragma omp parallel sections
+{
+#pragma omp section
+    printf("Hello %d\n",omp_get_thread_num());
+#pragma omp section
+    printf("World %d\n",omp_get_thread_num());
+}
+    exit(0);
+}
 
+~~~
