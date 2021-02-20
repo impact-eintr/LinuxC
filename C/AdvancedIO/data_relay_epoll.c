@@ -1,6 +1,6 @@
-#include <bits/types/struct_timeval.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/poll.h>
 #include <time.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -8,7 +8,7 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <errno.h>
-#include <sys/select.h>
+#include <sys/epoll.h>
 
 #define BUFSIZE 1024
 #define TTY1 "/dev/tty11"
@@ -94,8 +94,8 @@ static void relay(int fd1,int fd2){
     int old_fd1,old_fd2;
 
     struct fsm_st fsm12,fsm21;//读左写右 读右写左
-
-    fd_set rset,wset;
+    
+    struct epoll_event ev;
 
     old_fd1 = fcntl(fd1,F_GETFL);
     fcntl(fd1,F_SETFL,old_fd1|O_NONBLOCK);
@@ -111,38 +111,55 @@ static void relay(int fd1,int fd2){
     fsm21.sfd = fd2;
     fsm21.dfd = fd1;
 
+    int epfd = epoll_create(2);
+    if (epfd < 0){
+        perror("epoll_create()");
+        exit(1);
+    }
+    ev.data.fd = fd1;
+    ev.events = 0;
+    epoll_ctl(epfd,EPOLL_CTL_ADD,fd1,&ev);
+    ev.data.fd = fd2;
+    ev.events = 0;
+    epoll_ctl(epfd,EPOLL_CTL_ADD,fd2,&ev);
+
     while(fsm12.state != STATE_T || fsm21.state != STATE_T){//状态机没有停转
+        ev.data.fd = fd1;
+        ev.events = 0;
         //布置监视任务
-        FD_ZERO(&rset);
-        FD_ZERO(&wset);
-        if (fsm12.state == STATE_R)
-          FD_SET(fsm12.sfd,&rset);
-        if (fsm12.state == STATE_W)
-          FD_SET(fsm12.sfd,&wset);
-        if (fsm21.state == STATE_R)
-          FD_SET(fsm21.sfd,&rset);
-        if (fsm21.state == STATE_W)
-          FD_SET(fsm21.sfd,&wset);
+        if (fsm12.state == STATE_R)//1可读
+          ev.events |= EPOLLIN;
+        if (fsm21.state == STATE_W)//1可写
+          ev.events |= EPOLLOUT;
+        epoll_ctl(epfd,EPOLL_CTL_MOD,fd1,&ev);
+
+        ev.data.fd = fd2;
+        ev.events = 0;
+        if (fsm21.state == STATE_R)//2可读
+          ev.events |= EPOLLIN;
+        if (fsm12.state == STATE_W)//2可写
+          ev.events |= EPOLLOUT;
+        epoll_ctl(epfd,EPOLL_CTL_MOD,fd2,&ev);
 
         //监视
-        struct  timeval ts;
-        ts.tv_sec = 0;
-        ts.tv_usec= 2;
-        int maxfd = fd1>fd2?fd1:fd2;
         if (fsm12.state < STATE_AUTO ||fsm21.state < STATE_AUTO){
-            if (select(maxfd+1,&rset,&wset,NULL,&ts) < 0){
+            while (epoll_wait(epfd,&ev,1,-1) < 0){
                 if (errno == EINTR)
                   continue;
-                perror("select()");
+                perror("poll()");
                 exit(1);
             }
         }
 
         //查看监视结果
-        if (FD_ISSET(fd1,&rset) || FD_ISSET(fd2,&wset) || fsm12.state > STATE_AUTO){
+        if ((ev.data.fd == fd1 && ev.events&POLLIN)||
+                (ev.data.fd == fd2 && ev.events&POLLOUT) ||
+                    fsm12.state > STATE_AUTO){
             fsm_driver(&fsm12);
         }
-        if (FD_ISSET(fd2,&rset) || FD_ISSET(fd1,&wset) || fsm21.state > STATE_AUTO){
+        if ((ev.data.fd == fd2 && ev.events&POLLIN) ||
+                (ev.data.fd == fd1 && ev.events&POLLOUT) ||
+                    fsm21.state > STATE_AUTO){
             fsm_driver(&fsm21);
         }
     }
@@ -150,6 +167,8 @@ static void relay(int fd1,int fd2){
     //恢复原来的文件描述符状态
     fcntl(fd1,F_SETFL,old_fd1);
     fcntl(fd2,F_SETFL,old_fd2);
+
+    close(epfd);
 
 }
 
