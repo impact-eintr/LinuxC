@@ -1,14 +1,14 @@
-CFLAGS		+=-Wall -g -lstdc++
-CC			=gcc
-TARGET		=stdio
-OBJ			=stdio.o
+CFLAGS	+=-Wall -g -lstdc++ -lpthread -D_FILE_OFFSET_BITS=64 -D_GUN_SOURCE -O2
+bin = ./bin/
+src = $(wildcard *.c)
+obj = $(patsubst %.c,%,$(src))
 
-$(TARGET):$(OBJ)
-	$(CC) $(OBJ) -o $@
+ALL:$(obj)
 
-$(OBJ):
-	$(CC) $(src) $(CFLAGS) -c -o $@
-	
+%:%.c
+	gcc $< -o $(bin)$@ $(CFLAGS)
+
 clean:
-	-rm -f $(OBJ)
-	-rm -f $(TARGET)
+	-rm -i $(bin)*
+
+.PHONY:clean ALL
