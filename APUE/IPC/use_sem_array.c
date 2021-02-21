@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <wait.h>
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/sem.h>
 
@@ -11,12 +12,43 @@
 #define FNAME "/tmp/out"
 #define BUFSIZE 1024
 
+static int semid;
 
+//取资源量
 static void P(){
+    struct sembuf op;
+
+    op.sem_num = 0;
+    op.sem_op = -1;//取一个资源
+    op.sem_flg = 0;//特殊要求
+
+    while(semop(semid,&op,1) < 0){
+        if (errno == EINTR||errno == EAGAIN){
+            continue;
+        }else{
+            perror("semop()");
+            exit(1);
+        }
+    }
 
 }
 
+//还资源量
 static void V(){
+    struct sembuf op;
+
+    op.sem_num = 0;
+    op.sem_op = 1;//取一个资源
+    op.sem_flg = 0;//特殊要求
+
+    while(semop(semid,&op,1) < 0){
+        if (errno == EINTR||errno == EAGAIN){
+            continue;
+        }else{
+            perror("semop()");
+            exit(1);
+        }
+    }
 
 }
 
@@ -25,15 +57,12 @@ static void handler(){
     char buf[BUFSIZE];
 
 
-    P();
-
     if(fp == NULL){
         perror("fopen()");
         exit(1);
     }
-    int fd = fileno(fp);
-    //进入临界区
-    lockf(fd,F_LOCK,0);
+
+    P();
 
     fgets(buf,BUFSIZE,fp);
     fseek(fp,0,SEEK_SET);
@@ -43,18 +72,14 @@ static void handler(){
 
     V();
 
-    //离开临界区
-    lockf(fd,F_ULOCK,0);
-
     fclose(fp);
 }
 
 int main()
 {
     pid_t pid;
-    int semid;
 
-    semid = semget(IPC_PRIVATE,1,0666);
+    semid = semget(IPC_PRIVATE,1,0666);//父子关系的进程通信可以使用匿名IPC
     if (semid < 0){
         perror("semget()");
         exit(1);

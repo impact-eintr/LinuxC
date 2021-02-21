@@ -219,6 +219,186 @@ int main(){
 ~~~
         
 ### 信号量数组 Semaphore Arrays
+- semget()
+- semop()
+- semctl()
+~~~ c
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/ipc.h>
+#include <unistd.h>
+#include <string.h>
+#include <wait.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/sem.h>
 
+#define THRNUM 20
+#define FNAME "/tmp/out"
+#define BUFSIZE 1024
+
+static int semid;
+
+//取资源量
+static void P(){
+    struct sembuf op;
+
+    op.sem_num = 0;
+    op.sem_op = -1;//取一个资源
+    op.sem_flg = 0;//特殊要求
+
+    while(semop(semid,&op,1) < 0){
+        if (errno == EINTR||errno == EAGAIN){
+            continue;
+        }else{
+            perror("semop()");
+            exit(1);
+        }
+    }
+
+}
+
+//还资源量
+static void V(){
+    struct sembuf op;
+
+    op.sem_num = 0;
+    op.sem_op = 1;//取一个资源
+    op.sem_flg = 0;//特殊要求
+
+    while(semop(semid,&op,1) < 0){
+        if (errno == EINTR||errno == EAGAIN){
+            continue;
+        }else{
+            perror("semop()");
+            exit(1);
+        }
+    }
+
+}
+
+static void handler(){
+    FILE *fp = fopen(FNAME,"r+");
+    char buf[BUFSIZE];
+
+
+    if(fp == NULL){
+        perror("fopen()");
+        exit(1);
+    }
+    int fd = fileno(fp);
+
+    //进入临界区
+    P();
+
+    fgets(buf,BUFSIZE,fp);
+    fseek(fp,0,SEEK_SET);
+    sleep(1);
+    fprintf(fp,"%d\n",atoi(buf)+1);
+    fflush(fp);
+
+    //离开临界区
+    V();
+
+    fclose(fp);
+}
+
+int main()
+{
+    pid_t pid;
+
+    semid = semget(IPC_PRIVATE,1,0666);//父子关系的进程通信可以使用匿名IPC
+    if (semid < 0){
+        perror("semget()");
+        exit(1);
+    }
+    //初始化
+    if (semctl(semid,0,SETVAL,1)){//相当于互斥量
+        perror("semctl()");
+        exit(1);
+
+    }    
+
+    for (int i = 0;i < THRNUM;i++){
+        pid = fork() ;
+        if (pid < 0){
+            perror("fork()");
+            exit(1);
+        }
+        if (pid == 0){
+            handler();
+            exit(0);
+        }
+    }
+
+    for (int i = 0;i < THRNUM;i++){
+        wait(NULL);
+    }
+    semctl(semid,0,IPC_RMID);
+
+    return 0;
+}
+
+~~~
 ### 共享内存 Shared Memory
+- shmget()
+- shmop()
+- shmctl()
 
+~~~ c
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/ipc.h>
+#include <unistd.h>
+#include <string.h>
+#include <wait.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/shm.h>
+
+#define BUFSIZE 1024
+#define SHMSIZE 4*1024*1024
+
+static int shmid;
+
+int main()
+{
+    pid_t pid;
+    char *ptr;
+
+    shmid = shmget(IPC_PRIVATE,SHMSIZE,0666);
+    if (shmid < 0){
+        perror("shmget()");
+        exit(1);
+    }
+
+    pid = fork() ;
+    if (pid < 0){
+        perror("fork()");
+        exit(1);
+    }
+    if (pid == 0){
+        ptr = shmat(shmid,NULL,0);
+        if (ptr == (void *)-1){
+            perror("shmat()");
+            exit(1);
+        }
+        strcpy(ptr,"hello");
+        shmdt(ptr);
+        exit(0);
+    }else{
+        wait(NULL);
+        ptr = shmat(shmid,NULL,0);
+        if (ptr == (void *)-1){
+            perror("shmat()");
+            exit(1);
+        }
+        puts(ptr);
+        shmdt(ptr);
+        shmctl(shmid,IPC_RMID,NULL);
+        exit(0);
+
+    }
+}
+
+~~~
