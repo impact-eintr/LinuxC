@@ -8,7 +8,7 @@
 struct msg_st{
     uint32_t math;
     uint32_t chinese;
-    uint8_t name[0];
+    char name[0];
 }__attribute__((packed));//不对齐
 
 #endif

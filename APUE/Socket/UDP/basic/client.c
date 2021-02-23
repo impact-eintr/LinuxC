@@ -20,18 +20,23 @@ int main()
     struct sockaddr_in raddr;//remote addr
 
     sfd = socket(AF_INET,SOCK_DGRAM,0/*IPPROTO_UDP*/);
-    int pkglen = sizeof(struct msg_st)+strlen("Mike");
+    int pkglen = sizeof(struct msg_st)+strlen("Mike")+1;// 注意给'/0'留位置
     sbuf = malloc(pkglen);
-
-    strcpy(sbuf->name,"Mike");
-    sbuf->math = htonl(99);//主机字节序转网络字节序
-    sbuf->chinese = htonl(89);
+    if (sbuf == NULL){
+        perror("malloc()");
+        exit(1);
+    }
+    
+    char *name = "Mike";
+    strcpy(sbuf->name,name);
+    sbuf->math = htonl(rand()%100);//主机字节序转网络字节序
+    sbuf->chinese = htonl(rand()%100);
 
     raddr.sin_family = AF_INET;
     raddr.sin_port = htons(atoi(SERVERPORT));
     inet_pton(AF_INET,"127.0.0.1",&raddr.sin_addr);
 
-    if(sendto(sfd,&sbuf,pkglen,0,(void *)&raddr,sizeof(raddr)) < 0){
+    if(sendto(sfd,sbuf,pkglen,0,(void *)&raddr,sizeof(raddr)) < 0){
         perror("sendto()");
         exit(1);
     }
