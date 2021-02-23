@@ -11,20 +11,14 @@
 
 #include "proto.h"
 
+#define BUFSIZE 1024
+
 int main()
 {
     int sfd;
-    struct msg_st *sbuf;
     struct sockaddr_in raddr;//remote addr
 
-    sfd = socket(AF_INET,SOCK_DGRAM,0/*IPPROTO_UDP*/);
-    int pkglen = sizeof(struct msg_st)+strlen("Mike")+1;// 注意给'/0'留位置
-    sbuf = malloc(pkglen);
-    if (sbuf == NULL){
-        perror("malloc()");
-        exit(1);
-    }
-    
+    sfd = socket(AF_INET,SOCK_STREAM,0/*IPPROTO_TCP*/);
 
     raddr.sin_family = AF_INET;
     raddr.sin_port = htons(atoi(SERVERPORT));
@@ -41,9 +35,13 @@ int main()
         perror("fopen()");
         exit(1);
     }
-    
 
-    puts("OK");
+    long long stamp;
+    if (fscanf(fp,FMT_STAMP,&stamp) < 1){
+        fprintf(stderr,"Bad format\n");
+    }else{
+        fprintf(stdout,FMT_STAMP,stamp);
+    }
 
     close(sfd);
 

@@ -7,9 +7,6 @@
 #define FMT_STAMP "%lld\n"
 #define SERVERPORT "2333"
 
-struct msg_st{
-    long long stamp;
-}__attribute__((packed));//不对齐
 
 #endif
 

@@ -29,13 +29,13 @@ static void debug(char *fmt,...){
 static void server_job(int newsd){
     char buf[BUFSIZE];
     int pkglen = 0;
-
-    sprintf(buf,FMT_STAMP,(long long)time(NULL));
-
+    
+    pkglen = sprintf(buf,FMT_STAMP,(long long)time(NULL));
     if (send(newsd,buf,pkglen,0) < 0){
         perror("send()");
         exit(1);
     }
+    fprintf(stdout,"%s",buf);
 }
 
 int main()
@@ -43,16 +43,8 @@ int main()
     int sfd;
     struct sockaddr_in laddr;//local addr
     struct sockaddr_in raddr;//remote addr
-    struct msg_st *rbuf;
     char ip[IPSIZE];
 
-    int pkglen = sizeof(struct msg_st)+NAMEMAX;
-    debug("%d\n",pkglen);
-    rbuf = malloc(pkglen);
-    if (rbuf == NULL){
-        perror("malloc()");
-        exit(1);
-    }
 
     sfd = socket(AF_INET,SOCK_STREAM,0/*IPPROTO_TCP*/);
     if (sfd < 0){
