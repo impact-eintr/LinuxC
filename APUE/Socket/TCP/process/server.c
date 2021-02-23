@@ -73,6 +73,8 @@ int main()
 
 
     socklen_t raddr_len = sizeof(raddr);
+    pid_t pid;
+
     while(1){
         int newsd;
         newsd = accept(sfd,(void *)&raddr,&raddr_len);//接收客户端连接
@@ -81,9 +83,19 @@ int main()
             exit(1);
         }
         
-        inet_ntop(AF_INET,&raddr.sin_addr,ip,IPSIZE);
-        printf("client %s %d\n",ip,ntohs(raddr.sin_port));
-        server_job(newsd);
+        pid = fork();
+        if (pid < 0){
+            perror("fork()");
+            exit(1);
+        }
+        if (pid == 0){
+            close(sfd);
+            inet_ntop(AF_INET,&raddr.sin_addr,ip,IPSIZE);
+            printf("client %s %d\n",ip,ntohs(raddr.sin_port));
+            server_job(newsd);
+            close(newsd);
+            exit(0);
+        }
         close(newsd);
     }
 

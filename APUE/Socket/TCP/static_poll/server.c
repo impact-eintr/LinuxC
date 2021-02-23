@@ -30,7 +30,7 @@ static void server_job(int newsd){
     char buf[BUFSIZE];
     int pkglen = 0;
 
-    pkglen = sprintf(buf,FMT_STAMP,(long long)time(NULL));
+    sprintf(buf,FMT_STAMP,(long long)time(NULL));
 
     if (send(newsd,buf,pkglen,0) < 0){
         perror("send()");
@@ -43,7 +43,16 @@ int main()
     int sfd;
     struct sockaddr_in laddr;//local addr
     struct sockaddr_in raddr;//remote addr
+    struct msg_st *rbuf;
     char ip[IPSIZE];
+
+    int pkglen = sizeof(struct msg_st)+NAMEMAX;
+    debug("%d\n",pkglen);
+    rbuf = malloc(pkglen);
+    if (rbuf == NULL){
+        perror("malloc()");
+        exit(1);
+    }
 
     sfd = socket(AF_INET,SOCK_STREAM,0/*IPPROTO_TCP*/);
     if (sfd < 0){
@@ -73,6 +82,8 @@ int main()
 
 
     socklen_t raddr_len = sizeof(raddr);
+    pid_t pid;
+
     while(1){
         int newsd;
         newsd = accept(sfd,(void *)&raddr,&raddr_len);//接收客户端连接
@@ -81,9 +92,19 @@ int main()
             exit(1);
         }
         
-        inet_ntop(AF_INET,&raddr.sin_addr,ip,IPSIZE);
-        printf("client %s %d\n",ip,ntohs(raddr.sin_port));
-        server_job(newsd);
+        pid = fork();
+        if (pid < 0){
+            perror("fork()");
+            exit(1);
+        }
+        if (pid == 0){
+            close(sfd);
+            inet_ntop(AF_INET,&raddr.sin_addr,ip,IPSIZE);
+            printf("client %s %d\n",ip,ntohs(raddr.sin_port));
+            server_job(newsd);
+            close(newsd);
+            exit(0);
+        }
         close(newsd);
     }
 
