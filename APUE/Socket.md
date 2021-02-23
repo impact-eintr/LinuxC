@@ -529,11 +529,37 @@ Client&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&n
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--------ACK4----->停止发送
 文件
 
-中途如果有ACK包Server没有成功收到那么将会再次发送数据包，成功的两次传输耗时将成为界定是否超时的标准(RTT)
-
+中途如果有ACK包Server没有成功收到那么将会再次发送数据包，来回通信延迟（Round-trip delay time），在通信（Communication）、电脑网络（Computer network）领域中，意指：在双方通信中，发讯方的信号（Signal）传播（Propagation）到收讯方的时间（意即：传播延迟（Propagation delay）），加上收讯方回传消息到发讯方的时间（如果没有造成双向传播速率差异的因素，此时间与发讯方将信号传播到收讯方的时间一样久）
 
 
 ## TCP
-### 从UDP到TCP
 
+关于TCP更多细节请看
+[TCP 的那些事儿（上）](https://coolshell.cn/articles/11564.html)
+[TCP 的那些事儿（下）](https://coolshell.cn/articles/11609.html)
+### 步骤
+Client
+1. 获取SOCKET
+2. 给SOCKET取得地址
+3. 发送连接
+4. 收/发消息
+5. 关闭
+Server
+1. 获取SOCKET
+2. 给SOCKET取得地址
+3. 简爱嗯SOCKET置为监听模式
+4. 接受连接
+5. 收/发消息
+6. 关闭
 
+~~~ c
+
+~~~
+
+~~~ c
+
+~~~
+
+~~~ c
+
+~~~
