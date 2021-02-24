@@ -96,7 +96,7 @@ int main()
             close(newsd);
             exit(0);
         }
-        close(newsd);
+        close(newsd);//父子进程必须都将打开的来自client的socket关闭，否则socket不会返回client
     }
 
     close(sfd);

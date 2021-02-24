@@ -5,10 +5,9 @@
 
 #define N 5
 
-void handler(int sig){
+static void handler(int sig){
     write(1,"S",1);
 }
-
 
 int main()
 {
@@ -18,7 +17,11 @@ int main()
     sigemptyset(&sigset);
     sigaddset(&sigset,SIGINT);
 
-    signal(SIGINT,handler);
+    struct sigaction sa;
+    sa.sa_handler = handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(SIGINT,&sa,NULL);
     
     //保存进入该模块前的状态
     sigprocmask(SIG_UNBLOCK,&sigset_status,NULL);

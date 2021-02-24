@@ -7,6 +7,5 @@
 #define FMT_STAMP "%lld\n"
 #define SERVERPORT "2333"
 
-
 #endif
 

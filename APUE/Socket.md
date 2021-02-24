@@ -547,19 +547,176 @@ Client
 Server
 1. 获取SOCKET
 2. 给SOCKET取得地址
-3. 简爱嗯SOCKET置为监听模式
+3. 将SOCKET置为监听模式
 4. 接受连接
 5. 收/发消息
 6. 关闭
 
+##### 普通多进程版
 ~~~ c
+#ifndef PROTO_H__
+#define PROTO_H__
+
+#include <stdint.h>
+
+#define NAMEMAX 512-8-8//(UDP推荐长度-UDP报头长度-结构体的长度)
+#define FMT_STAMP "%lld\n"
+#define SERVERPORT "2333"
+
+
+#endif
 
 ~~~
 
 ~~~ c
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/ip.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <stdarg.h>
+#include <time.h>
+
+#include "proto.h"
+
+#define IPSIZE 1024
+#define BUFSIZE 1024
+#define SERVERPORT "2333"
+
+static void server_job(int newsd){
+    char buf[BUFSIZE];
+    int pkglen = 0;
+
+    pkglen = sprintf(buf,FMT_STAMP,(long long)time(NULL));
+
+    if (send(newsd,buf,pkglen,0) < 0){
+        perror("send()");
+        exit(1);
+    }
+}
+
+int main()
+{
+    int sfd;
+    struct sockaddr_in laddr;//local addr
+    struct sockaddr_in raddr;//remote addr
+    char ip[IPSIZE];
+
+    sfd = socket(AF_INET,SOCK_STREAM,0/*IPPROTO_TCP*/);
+    if (sfd < 0){
+        perror("socket()");
+        exit(1);
+    }
+    
+    int val = 1;
+    if(setsockopt(sfd,SOL_SOCKET,SO_REUSEADDR,&val,sizeof(val)) < 0){
+        perror("setsockopt()");
+        exit(1);
+    }
+
+    laddr.sin_family = AF_INET;//指定协议
+    laddr.sin_port = htons(atoi(SERVERPORT));//指定网络通信端口
+    inet_pton(AF_INET,"0.0.0.0",&laddr.sin_addr);//IPv4点分式转二进制数
+
+    if(bind(sfd,(void *)&laddr,sizeof(laddr)) < 0){
+        perror("bind()");
+        exit(1);
+    }
+
+    if(listen(sfd,1024) < 0){//全连接数量
+        perror("listen()");
+        exit(1);
+    }
+
+
+    socklen_t raddr_len = sizeof(raddr);
+    pid_t pid;
+
+    while(1){
+        int newsd;
+        newsd = accept(sfd,(void *)&raddr,&raddr_len);//接收客户端连接
+        if (newsd < 0){
+            perror("accept()");
+            exit(1);
+        }
+        
+        pid = fork();
+        if (pid < 0){
+            perror("fork()");
+            exit(1);
+        }
+        if (pid == 0){
+            close(sfd);
+            inet_ntop(AF_INET,&raddr.sin_addr,ip,IPSIZE);
+            printf("client %s %d\n",ip,ntohs(raddr.sin_port));
+            server_job(newsd);
+            close(newsd);
+            exit(0);
+        }
+        close(newsd);//父子进程必须都将打开的来自client的socket关闭，否则socket不会返回client
+    }
+
+    close(sfd);
+    
+    exit(0);
+}
 
 ~~~
 
 ~~~ c
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/ip.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <math.h>
+#include <string.h>
 
+#include "proto.h"
+
+#define BUFSIZE 1024
+
+int main()
+{
+    int sfd;
+    struct sockaddr_in raddr;//remote addr
+
+    sfd = socket(AF_INET,SOCK_STREAM,0/*IPPROTO_TCP*/);
+
+    raddr.sin_family = AF_INET;
+    raddr.sin_port = htons(atoi(SERVERPORT));
+    inet_pton(AF_INET,"127.0.0.1",&raddr.sin_addr);
+
+    if(connect(sfd,(void *)&raddr,sizeof(raddr)) < 0){
+        perror("connect()");
+        exit(1);
+    }
+
+    FILE *fp;
+    fp = fdopen(sfd,"r+");
+    if (fp == NULL){
+        perror("fopen()");
+        exit(1);
+    }
+
+    long long stamp;
+    if (fscanf(fp,FMT_STAMP,&stamp) < 1){
+        fprintf(stderr,"Bad format\n");
+    }else{
+        fprintf(stdout,FMT_STAMP,stamp);
+    }
+
+    close(sfd);
+
+    exit(0);
+}
 ~~~
+
+##### 动态进程池版
+

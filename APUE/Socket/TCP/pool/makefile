@@ -1,4 +1,4 @@
-CFLAGS	+=-Wall -g -lstdc++ -lpthread -O2
+CFLAGS	+=-Wall -g -lpthread -O2
 bin = ./bin/
 src = $(wildcard *.c)
 obj = $(patsubst %.c,%,$(src))

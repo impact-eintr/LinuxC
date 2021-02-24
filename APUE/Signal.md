@@ -1,3 +1,6 @@
+@[TOC](文章目录)
+<hr>
+
 # 信号
 
 ## 信号的概念
@@ -15,34 +18,6 @@ void (*signal(int sig,test))(int){};
 
 ~~~
 
-~~~ c
-#include <stdio.h>
-#include <stdlib.h>
-#include <signal.h>
-#include <unistd.h>
-
-#define N 20
-
-void handler(int sig){
-    write(1,"!",1);
-}
-
-
-int main()
-{
-    int i;
-
-    signal(SIGINT,handler);
-
-    for (i = 0;i < N;i++){
-        write(1,"*",1);
-        sleep(1);
-    }
-    
-    exit(0);
-}
-~~~
-
 
 **信号会打断阻塞的系统调用**
 
@@ -55,8 +30,9 @@ int main()
 **所有的系统调用都是可重入的 一部分库函数 **
 ## 信号的响应过程(重要)
 **信号从收到到响应有不可避免的延时**
+![在这里插入图片描述](https://img-blog.csdnimg.cn/20210213182415635.jpg?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQ0ODA3Nzk2,size_16,color_FFFFFF,t_70#pic_center)
 
-**如何忽略掉一个信号，标准信号为什么要丢失**
+
 
 ## 信号的常用函数
 - kill() **不是用来杀死进程的，是用来发送信号的，只不过大多数信号有杀死进程的作用**
@@ -134,7 +110,9 @@ main:
 	.cfi_def_cfa_register 6
 	subq	$16, %rsp
 	movq	$0, -8(%rbp)
-	movl	$5, %edi
+	movl	$5, %edihttps://github.com/impact-eintr/LinuxC
+学习记录的笔记与代码，持续更新中
+希望各位大佬给个star
 	call	alarm@PLT
 	leaq	handler(%rip), %rsi
 	movl	$14, %edi
@@ -197,7 +175,7 @@ main:
 	.type	loop, @object
 	.size	loop, 4
 loop:
-	.long	1;将loop的值固定为1
+	.long	1                 ;将loop的值固定为1
 	.ident	"GCC: (GNU) 10.2.0"
 	.section	.note.GNU-stack,"",@progbits
 ~~~
@@ -468,7 +446,8 @@ int main(int argc,char** argv)
 }
 
 ~~~
-- setitimer()
+
+- setitimer() 更灵活 **而且误差不累积**
 ~~~ c
 //信号处理函数
 static void handler(int sig){
@@ -516,25 +495,32 @@ static void mod_unload(){
     }
 }
 
-
 ~~~
 - abort
 - system()
-**在有信号参与的程序当中，要阻塞住一个信号，要忽略调两个信号 这样system()才能正常使用 **
+
+	- **在有信号参与的程序当中，要阻塞住一个信号，要忽略调两个信号 这样system()才能正常使用**
+
 #### sleep的缺陷
+
 **在某些平台，`sleep()`是使用`alarm`+`pause`封装的，而程序中出现多于1个的`alarm`alarm将失效**
 ## 信号集
 - sigset_t 信号集类型
-- sigemptyset()
-- sigfillset()
-- sigaddset()
-- sigdelset()
+- sigemptyset() 	将一个信号集置为空集
+- sigfillset() 	将一个信号集置为全集
+- sigaddset() 	将一个信号加入信号集
+- sigdelset()	 将一个信号移除信号集
 - sigismember()
 
-## 信号屏蔽字/pending集的处理
-- sigprocmask()
+### 信号屏蔽字/pending集的处理
+
 **我们无法控制信号何时到来，但可以选择如何响应它**
 
+- sigprocmask(int how,const sigset_t *set,sigset_t *oldset)
+- how的取值
+	-  SIG_BLOCK make全0
+	-  SIG_UNBLOCK mask全1
+	-  SIG_SETMASK
 ~~~ c
 #include <stdio.h>
 #include <stdlib.h>
@@ -561,12 +547,14 @@ int main()
     //保存进入该模块前的状态
     sigprocmask(SIG_UNBLOCK,&sigset_status,NULL);
     while(1){
+         //屏蔽对信号的响应
         sigprocmask(SIG_BLOCK,&sigset,&old_sigset);
         for (i = 0;i < N;i++){
             write(1,"*",1);
             sleep(1);
         }
         write(1,"\n",1);
+        //恢复对信号的响应
         sigprocmask(SIG_SETMASK,&old_sigset,NULL);
     }
     //恢复进入该模块前的状态
@@ -575,9 +563,54 @@ int main()
     exit(0);
 }
 ~~~
+ctrl+\ 退出
 
 ## 扩展
 - sigsuspend() 信号驱动
+~~~ c
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <unistd.h>
+
+#define N 5
+
+static void handler(int sig){
+    write(1,"S",1);
+}
+
+int main()
+{
+    int i;
+
+    sigset_t sigset,old_sigset,sigset_status;
+    sigemptyset(&sigset);
+    sigaddset(&sigset,SIGINT);
+
+    struct sigaction sa;
+    sa.sa_handler = handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(SIGINT,&sa,NULL);
+
+    //保存进入该模块前的状态
+    sigprocmask(SIG_UNBLOCK,&sigset_status,NULL);
+    sigprocmask(SIG_BLOCK,&sigset,&old_sigset);
+    while(1){
+        for (i = 0;i < N;i++){
+            write(1,"*",1);
+            sleep(1);
+        }
+        write(1,"\n",1);
+        sigsuspend(&old_sigset);
+    }
+    //恢复进入该模块前的状态
+    sigprocmask(SIG_SETMASK,&sigset_status,NULL);
+
+    exit(0);
+}
+~~~
+
 ~~~ c
 #include <stdio.h>
 #include <stdlib.h>
@@ -649,7 +682,6 @@ static void handler(int sig,siginfo_t *infop,void *unused){
 
 //装载信号处理模块
 static void mod_load(){
-    //alarm_status = signal(SIGALRM,handler);//保存alarm信号处理函数原来的状态
     struct sigaction sa;
     sa.sa_sigaction = handler;
     sigemptyset(&sa.sa_mask);
@@ -675,7 +707,8 @@ static void mod_load(){
 static void mod_unload(){
    //signal(SIGALRM,alarm_status);
    sigaction(SIGALRM,&old_sa,NULL);
-    
+   
+   //恢复时钟信号状态
     struct itimerval itv;
     itv.it_interval.tv_sec = 0;
     itv.it_interval.tv_usec = 0;
