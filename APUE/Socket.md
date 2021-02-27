@@ -38,7 +38,14 @@ struct{
 
 ### socket
 **一个中间层，连接网络协议与文件操作**
+socket就是插座，与兴在计算机中两个从小通过socket建立起一个通道，数据在通道中传输
+socket把复杂的TCP/IP协议族隐藏了起来，对于程序元来说只要用好socket相关的函数接可以完成网络通信
 
+socket提供了`stream` `datagram` 两种通信机制，即流socket和数据包socket
+
+流socket基于TCP协议，是一个有序、可靠、双向字节刘的通道，传输数据不会丢失、不会重复、顺序也不会错乱
+
+数据报socket基于UDP协议，不需要建立和尉迟连接，可能会丢失或错乱。UDP不是一个可靠的协议，对数据的长度有限制，但是效率较高
 ~~~ c
 int socket(int domain,int type,int protocol)
           //SOCK_STREAM 有序 可靠 双工 基于(单字节)字节流
