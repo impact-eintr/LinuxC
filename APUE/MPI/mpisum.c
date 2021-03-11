@@ -23,7 +23,6 @@ int main()
         int tempsum = 0;
         for (int i = my_rank;i < N;i+=comm_sz-1){
             tempsum += i;
-            printf("[%d]\n",my_rank);
         }
         *sum = tempsum;
         MPI_Send(sum,sizeof(*sum),MPI_INT,0,0,MPI_COMM_WORLD);
