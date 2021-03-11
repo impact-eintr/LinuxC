@@ -2,7 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <mpi.h>
+//#include <mpi.h>
+#include <mpi/mpi.h>
 
 #define N 10000
 
