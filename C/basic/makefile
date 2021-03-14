@@ -1,4 +1,4 @@
-CFLAGS	+=-Wall -g -O2
+CFLAGS	+=-Wall -g
 bin = ./bin/
 src = $(wildcard *.c)
 obj = $(patsubst %.c,%,$(src))
