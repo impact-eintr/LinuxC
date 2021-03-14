@@ -31,6 +31,7 @@ static void *handler(void *p){
         my_sum += my_x;
     }
     sleep(1);
+    res[my_task/(N/core)] = my_sum;
     printf("[%d]sum= %d\n",my_task,my_sum);
 
     pthread_exit(NULL);
@@ -64,7 +65,11 @@ int main()
 
     for (int n = 0;n < core;n++){
         pthread_join(ptid[n],NULL);
+        sum += res[n];
     }
+
+    printf("sum= %d\n",sum);
+
     pthread_mutex_destroy(&mutex);
     pthread_cond_destroy(&cond);
 
