@@ -28,13 +28,13 @@ int main()
         for (int i = *task;i < *task+(N/(comm_sz-1));i++){
             tempsum += arr[i];
         }
-        printf("tempsum = %d\n",tempsum);
         *sum = tempsum;
         MPI_Send(sum,sizeof(*sum),MPI_INT,0,0,MPI_COMM_WORLD);
     }else {
+        *task = 0;
         for (int i = 0;i < comm_sz;i++){
-            *task = i;
             MPI_Send(task,sizeof(*task),MPI_INT,i,0,MPI_COMM_WORLD);
+            *task = i*N/(comm_sz-1);
         }
 
         for (int i = 0;i < comm_sz;i++){
