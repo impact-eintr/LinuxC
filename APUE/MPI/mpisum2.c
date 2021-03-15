@@ -4,14 +4,18 @@
 #include <string.h>
 #include <mpi.h>
 
-#define N 10000
+#define N 24
+
+static int sum = 0;
+static int num = 0;
+static int arr[N] = {1,4,3,9,2,8,5,1,1,6,2,7,2,5,0,4,1,8,6,5,1,2,3,9};
 
 int main()
 {
     int comm_sz;
     int my_rank;
 
-    int *sum = malloc(sizeof(int));
+    int *task = malloc(sizeof(int));
     int res = 0;
     
     MPI_Init(NULL,NULL);
@@ -21,15 +25,15 @@ int main()
 
     if (my_rank != 0){
         int tempsum = 0;
-        for (int i = my_rank;i < N;i+=comm_sz-1){
-            tempsum += i;
+        for (int i = task;i < task+(N/(comm_sz-1));i++){
+            tempsum += arr[i];
         }
-        *sum = tempsum;
-        MPI_Send(sum,sizeof(*sum),MPI_INT,0,0,MPI_COMM_WORLD);
+        sum = tempsum;
+        MPI_Recv(task,sizeof(*task),MPI_INT,i,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
     }else {
         *sum = 0;
         for (int i = 1;i < comm_sz;i++){
-            MPI_Recv(sum,sizeof(*sum),MPI_INT,i,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+            MPI_Send(task,sizeof(*task),MPI_INT,0,0,MPI_COMM_WORLD);
             res += *sum;
         }
         printf("%d\n",res);
