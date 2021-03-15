@@ -20,6 +20,7 @@ int main()
     MPI_Init(NULL,NULL);
     //从这里开始并行执行
     MPI_Comm_size(MPI_COMM_WORLD,&comm_sz);//使用4核
+    printf("comm_sz = %d\n",comm_sz);
     MPI_Comm_rank(MPI_COMM_WORLD,&my_rank);
 
     if (my_rank != 0){
