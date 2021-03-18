@@ -17,6 +17,8 @@ int main()
     MPI_Comm_size(MPI_COMM_WORLD,&comm_sz);//使用8核
     MPI_Comm_rank(MPI_COMM_WORLD,&my_rank);
 
+    fprintf(stdout,"%d %d\n",my_rank,comm_sz);
+
     if (my_rank != 0){
         sprintf(greeting,"欢迎 [%d]进程 [%d]核心",my_rank,comm_sz);
         MPI_Send(greeting,strlen(greeting)+1,MPI_CHAR,0,0,MPI_COMM_WORLD);
