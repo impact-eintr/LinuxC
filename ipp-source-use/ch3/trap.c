@@ -15,6 +15,7 @@
  */
 
 #include <stdio.h>
+#include <math.h>
 
 double f(double x);    /* Function we're integrating */
 double Trap(double a, double b, int n, double h);
@@ -68,6 +69,6 @@ double Trap(double a, double b, int n, double h) {
 double f(double x) {
    double return_val;
 
-   return_val = x*x;
+   return_val = sin(x)+1;
    return return_val;
 }  /* f */
