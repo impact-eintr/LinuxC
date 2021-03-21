@@ -7,6 +7,8 @@ static double f(double x){
     return x * x;
 }
 
+
+//如何只输出一句提示
 int main() {
     int my_rank, comm_sz, n , local_n;   
     double a , b , h, local_a, local_b;
