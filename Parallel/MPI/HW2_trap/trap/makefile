@@ -1,4 +1,4 @@
-CFLAGS += -Wall -g -O2
+CFLAGS += -Wall -lm -g -O2
 
 all:trap
 

@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include "trap.h"
 
 static double f(double x){
-    return x * x;
+    return sin(x);
 }
 
 int main() {
