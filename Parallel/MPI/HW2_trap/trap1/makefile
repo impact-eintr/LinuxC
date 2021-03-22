@@ -1,4 +1,4 @@
-CFLAGS += -Wall -g -O2
+CFLAGS += -Wall -g -lm -O2
 CC = mpicc
 
 all:trap
