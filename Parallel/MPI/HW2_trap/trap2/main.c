@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <mpi.h>
+#include <mpich/mpi.h>
 #include <math.h>
 #include "trap.h"
 
@@ -58,7 +58,7 @@ int main() {
     } else {
         total_int = local_int;
         for (source = 1; source < comm_sz; source++) {
-            MPI_Recv(&local_int, 1, MPI_DOUBLE, source, 0,
+            MPI_Recv(&local_int, 1, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG,
                         MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             total_int += local_int;
         }

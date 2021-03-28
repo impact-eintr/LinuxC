@@ -372,9 +372,8 @@ double Trap(double left_endpt,double right_endpt,int trap_count,double base_len,
 ~~~
 
 ~~~ c
-#include <stdio.h>
 #include <stdlib.h>
-#include <mpi.h>
+#include <mpich/mpi.h>
 #include <math.h>
 #include "trap.h"
 
@@ -396,15 +395,7 @@ void Get_input(int my_rank, int comm_sz, double* a_p, double* b_p,
          MPI_Send(b_p, 1, MPI_DOUBLE, dest, 0, MPI_COMM_WORLD);
          MPI_Send(n_p, 1, MPI_INT, dest, 0, MPI_COMM_WORLD);
       } 
-      // 这里是因为有一些矩阵没有计算到，所以，非整除的情况下结果会有比较大的缺失。
-      // 这里将这些矩形在0号线程上补上。
-      if (n%comm_sz){
-          remain = Trap(h * local_n * comm_sz, b, n%comm_sz, h);
-
-      }
-
-      total_int += remain;
-   } else {
+   } else { /* my_rank != 0 */
       MPI_Recv(a_p, 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD,
             MPI_STATUS_IGNORE);
       MPI_Recv(b_p, 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD,
@@ -418,7 +409,8 @@ int main() {
     int my_rank, comm_sz, n , local_n;   
     double a , b , h, local_a, local_b;
     double local_int, total_int;
-    int source; 
+    int source;
+    double remain = 0.0;
 
     MPI_Init(NULL, NULL);
 
@@ -444,7 +436,15 @@ int main() {
                         MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             total_int += local_int;
         }
-    } 
+        // 这里是因为有一些矩阵没有计算到，所以，非整除的情况下结果会有比较大的缺失。
+        // 这里将这些矩形在0号线程上补上。
+        if (n%comm_sz){
+            remain = Trap(h * local_n * comm_sz, b, n%comm_sz, h, f);
+        }
+
+        total_int += remain;
+
+    }
 
     if (my_rank == 0) {
         printf("当n = %d , 区间 (%f ,%f)的面积 = %.15e\n",
