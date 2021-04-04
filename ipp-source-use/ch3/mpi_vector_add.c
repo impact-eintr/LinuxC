@@ -140,7 +140,7 @@ void Read_n(
       scanf("%d", n_p);
    }
    MPI_Bcast(n_p, 1, MPI_INT, 0, comm);
-   if (*n_p =< 0 || *n_p % comm_sz != 0) local_ok = 0;
+   if (*n_p <= 0 || *n_p % comm_sz != 0) local_ok = 0;
    Check_for_error(local_ok, fname,
          "n should be > 0 and evenly divisible by comm_sz", comm);
    *local_n_p = *n_p/comm_sz;
