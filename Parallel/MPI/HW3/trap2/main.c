@@ -41,7 +41,9 @@ int main() {
     local_b = local_a + local_n*h;
     local_int = Trap(local_a, local_b, local_n, h,f);
     
-    MPI_Reduce(&local_int,&total_int,1,MPI_DOUBLE, MPI_SUM,0,MPI_COMM_WORLD);
+    printf("[%d] a =%f  b = %f n = %d local_int = %f\n",my_rank, local_a, local_b, local_n, local_int);
+    
+    MPI_Allreduce(&local_int, &total_int, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
     if (my_rank == 0) {
         printf("当n = %d , 区间 (%f ,%f)的面积 = %.15e\n",
