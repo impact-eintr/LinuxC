@@ -23,18 +23,15 @@ int main()
     MPI_Comm_rank(MPI_COMM_WORLD,&my_rank);
 
     task = my_rank * N/comm_sz;
-    printf("task: %d\n",task);
 
     for (int i = task;i < task+(N/comm_sz);i++){
         *localsum += arr[i];
-        printf("localsum: %d\n",*localsum);
     }
 
-    MPI_Allreduce(localsum, sum, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    //MPI_Allreduce(localsum, sum, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Reduce(localsum, sum, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
-    if (my_rank == 0){
-        printf("sum = %d\n",*sum);
-    }
+    printf("sum = %d\n",*sum);
 
     MPI_Finalize();
 
