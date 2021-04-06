@@ -24,7 +24,7 @@
 #define BUFSIZE 1024
 
 enum {
-    STATE_IDLE=0,//idle 空闲的
+    STATE_IDLE=0,  // idle 空闲的
     STATE_BUSY
 };
 
@@ -36,7 +36,7 @@ struct server_st{
 static struct server_st *serverpool;
 static int idle_count = 0,busy_count = 0;
 
-//socket相关全局变量
+// socket相关全局变量
 static int sfd;
 
 static void handle(int sig){
@@ -54,11 +54,11 @@ static void server_job(int pos){
 
     ppid = getppid();//父进程
 
-    while(1){
+    while(1) {
         serverpool[pos].state = STATE_IDLE;
-        kill(ppid,SIG_NOTIFY);
+        kill(ppid, SIG_NOTIFY);
 
-        newsd = accept(sfd,(void *)&raddr,&raddr_len);//接收客户端连接
+        newsd = accept(sfd, (void *)&raddr,&raddr_len);//接收客户端连接
         if (newsd < 0){
             if (errno == EINTR || errno == EAGAIN)
               continue;
@@ -121,7 +121,7 @@ static int del_one_server(){
         return -1;
     }
 
-    for(slot = 0;slot < MAXCLINETS;slot++){
+    for(slot = 0;slot < MAXCLINETS;slot++) {
         if (serverpool[slot].pid != -1 && serverpool[slot].state == STATE_IDLE){
             kill(serverpool[slot].pid,SIGTERM);
             serverpool[slot].pid = -1;

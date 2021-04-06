@@ -118,6 +118,7 @@ inline double imag(const& x){
 
 ## 访问级别
 - private 在类外无法访问
+    - 数据封装
 ~~~ cpp
 //不允许
 complex c1(2,1);
@@ -125,10 +126,14 @@ cout << c1.re;
 cout << c1.im;
 ~~~
 - public 在类内可以访问
+    - 函数封装
+    - 公开函数
 ~~~ cpp
 //允许
 complex c1(2,1);
 cout << c1.real();
 cout << c1.imag();
 ~~~
+
+
 
