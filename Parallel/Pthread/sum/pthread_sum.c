@@ -30,7 +30,7 @@ static void *handler(void *p){
         my_x = arr[i];
         my_sum += my_x;
     }
-    sleep(1);
+    //sleep(1);
     res[my_task/(N/core)] = my_sum;
     printf("[%d]sum= %d\n",my_task,my_sum);
 
@@ -50,7 +50,7 @@ int main()
     }
 
     for (int i = 0;i < N;i+=(N/core)){
-        //临界区
+        // 临界区
         pthread_mutex_lock(&mutex);
 
         while(num != -1){

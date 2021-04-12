@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <mpich/mpi.h>
+#include <mpi.h>
 #include <math.h>
 #include "trap.h"
 
