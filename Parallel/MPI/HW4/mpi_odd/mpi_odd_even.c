@@ -1,155 +1,25 @@
-# 实验3
-
-## 编写奇偶排序串行代码
-~~~ c
-#include <stdio.h>
-#include <stdlib.h>
-
-/* Keys in the random list in the range 0 <= key < RMAX */
-const int RMAX = 100;
-
-void Usage(char* prog_name);
-void Get_args(int argc, char* argv[], int* n_p, char* g_i_p);
-void Generate_list(int a[], int n);
-void Print_list(int a[], int n, char* title);
-void Read_list(int a[], int n);
-void Odd_even_sort(int a[], int n);
-
-/*-----------------------------------------------------------------*/
-int main(int argc, char* argv[]) {
-   int  n;
-   char g_i;
-   int* a;
-
-   Get_args(argc, argv, &n, &g_i);
-   a = (int*) malloc(n*sizeof(int));
-   if (g_i == 'g') {
-      Generate_list(a, n);
-      Print_list(a, n, "Before sort");
-   } else {
-      Read_list(a, n);
-   }
-
-   Odd_even_sort(a, n);
-
-   Print_list(a, n, "After sort");
-   
-   free(a);
-   return 0;
-}  /* main */
-
-
-/*-----------------------------------------------------------------
- * Function:  Usage
- * Purpose:   Summary of how to run program
+/*
+ * File:     mpi_odd_even.c
+ * Purpose:  Implement parallel odd-even sort of an array of 
+ *           nonegative ints
+ * Input:
+ *    A:     elements of array (optional)
+ * Output:
+ *    A:     elements of A after sorting
+ *
+ * Compile:  mpicc -g -Wall -o mpi_odd_even mpi_odd_even.c
+ * Run:
+ *    mpiexec -n <p> mpi_odd_even <g|i> <global_n> 
+ *       - p: the number of processes
+ *       - g: generate random, distributed list
+ *       - i: user will input list on process 0
+ *       - global_n: number of elements in global list
+ *
+ * Notes:
+ * 1.  global_n must be evenly divisible by p
+ * 2.  Except for debug output, process 0 does all I/O
+ * 3.  Optional -DDEBUG compile flag for verbose output
  */
-void Usage(char* prog_name) {
-   fprintf(stderr, "usage:   %s <n> <g|i>\n", prog_name);
-   fprintf(stderr, "   n:   number of elements in list\n");
-   fprintf(stderr, "  'g':  generate list using a random number generator\n");
-   fprintf(stderr, "  'i':  user input list\n");
-}  /* Usage */
-
-
-/*-----------------------------------------------------------------
- * Function:  Get_args
- * Purpose:   Get and check command line arguments
- * In args:   argc, argv
- * Out args:  n_p, g_i_p
- */
-void Get_args(int argc, char* argv[], int* n_p, char* g_i_p) {
-   if (argc != 3 ) {
-      Usage(argv[0]);
-      exit(0);
-   }
-   *n_p = atoi(argv[1]);
-   *g_i_p = argv[2][0];
-
-   if (*n_p <= 0 || (*g_i_p != 'g' && *g_i_p != 'i') ) {
-      Usage(argv[0]);
-      exit(0);
-   }
-}  /* Get_args */
-
-
-/*-----------------------------------------------------------------
- * Function:  Generate_list
- * Purpose:   Use random number generator to generate list elements
- * In args:   n
- * Out args:  a
- */
-void Generate_list(int a[], int n) {
-   int i;
-
-   srandom(0);
-   for (i = 0; i < n; i++)
-      a[i] = random() % RMAX;
-}  /* Generate_list */
-
-
-/*-----------------------------------------------------------------
- * Function:  Print_list
- * Purpose:   Print the elements in the list
- * In args:   a, n
- */
-void Print_list(int a[], int n, char* title) {
-   int i;
-
-   printf("%s:\n", title);
-   for (i = 0; i < n; i++)
-      printf("%d ", a[i]);
-   printf("\n\n");
-}  /* Print_list */
-
-
-/*-----------------------------------------------------------------
- * Function:  Read_list
- * Purpose:   Read elements of list from stdin
- * In args:   n
- * Out args:  a
- */
-void Read_list(int a[], int n) {
-   int i;
-
-   printf("Please enter the elements of the list\n");
-   for (i = 0; i < n; i++)
-      scanf("%d", &a[i]);
-}  /* Read_list */
-
-
-/*-----------------------------------------------------------------
- * Function:     Odd_even_sort
- * Purpose:      Sort list using odd-even transposition sort
- * In args:      n
- * In/out args:  a
- */
-void Odd_even_sort(
-      int  a[]  /* in/out */, 
-      int  n    /* in     */) {
-   int phase, i, temp;
-
-   for (phase = 0; phase < n; phase++) 
-      if (phase % 2 == 0) { /* Even phase */
-         for (i = 1; i < n; i += 2) 
-            if (a[i-1] > a[i]) {
-               temp = a[i];
-               a[i] = a[i-1];
-               a[i-1] = temp;
-            }
-      } else { /* Odd phase */
-         for (i = 1; i < n-1; i += 2)
-            if (a[i] > a[i+1]) {
-               temp = a[i];
-               a[i] = a[i+1];
-               a[i+1] = temp;
-            }
-      }
-}
-~~~
-
-
-## 编写奇偶排序并行代码
-~~~ c
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -230,6 +100,12 @@ int main(int argc, char* argv[]) {
 }  /* main */
 
 
+/*-------------------------------------------------------------------
+ * Function:   Generate_list
+ * Purpose:    Fill list with random ints
+ * Input Args: local_n, my_rank
+ * Output Arg: local_A
+ */
 void Generate_list(int local_A[], int local_n, int my_rank) {
    int i;
 
@@ -240,6 +116,12 @@ void Generate_list(int local_A[], int local_n, int my_rank) {
 }  /* Generate_list */
 
 
+/*-------------------------------------------------------------------
+ * Function:  Usage
+ * Purpose:   Print command line to start program
+ * In arg:    program:  name of executable
+ * Note:      Purely local, run only by process 0;
+ */
 void Usage(char* program) {
    fprintf(stderr, "usage:  mpirun -np <p> %s <g|i> <global_n>\n",
        program);
@@ -252,6 +134,12 @@ void Usage(char* program) {
 }  /* Usage */
 
 
+/*-------------------------------------------------------------------
+ * Function:    Get_args
+ * Purpose:     Get and check command line arguments
+ * Input args:  argc, argv, my_rank, p, comm
+ * Output args: global_n_p, local_n_p, gi_p
+ */
 void Get_args(int argc, char* argv[], int* global_n_p, int* local_n_p, 
          char* gi_p, int my_rank, int p, MPI_Comm comm) {
 
@@ -292,6 +180,13 @@ void Get_args(int argc, char* argv[], int* global_n_p, int* local_n_p,
 }  /* Get_args */
 
 
+/*-------------------------------------------------------------------
+ * Function:   Read_list
+ * Purpose:    process 0 reads the list from stdin and scatters it
+ *             to the other processes.
+ * In args:    local_n, my_rank, p, comm
+ * Out arg:    local_A
+ */
 void Read_list(int local_A[], int local_n, int my_rank, int p,
          MPI_Comm comm) {
    int i;
@@ -312,6 +207,14 @@ void Read_list(int local_A[], int local_n, int my_rank, int p,
 }  /* Read_list */
 
 
+/*-------------------------------------------------------------------
+ * Function:   Print_global_list
+ * Purpose:    Print the contents of the global list A
+ * Input args:  
+ *    n, the number of elements 
+ *    A, the list
+ * Note:       Purely local, called only by process 0
+ */
 void Print_global_list(int local_A[], int local_n, int my_rank, int p, 
       MPI_Comm comm) {
    int* A;
@@ -334,6 +237,12 @@ void Print_global_list(int local_A[], int local_n, int my_rank, int p,
 
 }  /* Print_global_list */
 
+/*-------------------------------------------------------------------
+ * Function:    Compare
+ * Purpose:     Compare 2 ints, return -1, 0, or 1, respectively, when
+ *              the first int is less than, equal, or greater than
+ *              the second.  Used by qsort.
+ */
 int Compare(const void* a_p, const void* b_p) {
    int a = *((int*)a_p);
    int b = *((int*)b_p);
@@ -346,6 +255,13 @@ int Compare(const void* a_p, const void* b_p) {
       return 1;
 }  /* Compare */
 
+/*-------------------------------------------------------------------
+ * Function:    Sort
+ * Purpose:     Sort local list, use odd-even sort to sort
+ *              global list.
+ * Input args:  local_n, my_rank, p, comm
+ * In/out args: local_A 
+ */
 void Sort(int local_A[], int local_n, int my_rank, 
          int p, MPI_Comm comm) {
    int phase;
@@ -385,6 +301,13 @@ void Sort(int local_A[], int local_n, int my_rank,
 }  /* Sort */
 
 
+/*-------------------------------------------------------------------
+ * Function:    Odd_even_iter
+ * Purpose:     One iteration of Odd-even transposition sort
+ * In args:     local_n, phase, my_rank, p, comm
+ * In/out args: local_A
+ * Scratch:     temp_B, temp_C
+ */
 void Odd_even_iter(int local_A[], int temp_B[], int temp_C[],
         int local_n, int phase, int even_partner, int odd_partner,
         int my_rank, int p, MPI_Comm comm) {
@@ -414,6 +337,15 @@ void Odd_even_iter(int local_A[], int temp_B[], int temp_C[],
 }  /* Odd_even_iter */
 
 
+/*-------------------------------------------------------------------
+ * Function:    Merge_low
+ * Purpose:     Merge the smallest local_n elements in my_keys
+ *              and recv_keys into temp_keys.  Then copy temp_keys
+ *              back into my_keys.
+ * In args:     local_n, recv_keys
+ * In/out args: my_keys
+ * Scratch:     temp_keys
+ */
 void Merge_low(
       int  my_keys[],     /* in/out    */
       int  recv_keys[],   /* in        */
@@ -435,6 +367,15 @@ void Merge_low(
    memcpy(my_keys, temp_keys, local_n*sizeof(int));
 }  /* Merge_low */
 
+/*-------------------------------------------------------------------
+ * Function:    Merge_high
+ * Purpose:     Merge the largest local_n elements in local_A 
+ *              and temp_B into temp_C.  Then copy temp_C
+ *              back into local_A.
+ * In args:     local_n, temp_B
+ * In/out args: local_A
+ * Scratch:     temp_C
+ */
 void Merge_high(int local_A[], int temp_B[], int temp_C[], 
         int local_n) {
    int ai, bi, ci;
@@ -467,6 +408,14 @@ void Print_list(int local_A[], int local_n, int rank) {
    printf("\n");
 }  /* Print_list */
 
+/*-------------------------------------------------------------------
+ * Function:   Print_local_lists
+ * Purpose:    Print each process' current list contents
+ * Input args: all
+ * Notes:
+ * 1.  Assumes all participating processes are contributing local_n 
+ *     elements
+ */
 void Print_local_lists(int local_A[], int local_n, 
          int my_rank, int p, MPI_Comm comm) {
    int*       A;
@@ -484,7 +433,4 @@ void Print_local_lists(int local_A[], int local_n,
    } else {
       MPI_Send(local_A, local_n, MPI_INT, 0, 0, comm);
    }
-}
-~~~
-
-
+}  /* Print_local_lists */

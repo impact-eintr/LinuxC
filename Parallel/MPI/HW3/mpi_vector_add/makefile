@@ -1,5 +1,5 @@
 CFLAGS +=-Wall -g -O2
-CC =gcc
+CC =mpicc
 
 all:vector_add
 

@@ -1,6 +1,19 @@
 # 实验2
 
-## 编写使用广播函数的梯形积分法的MPI程序
+## 实验环境
+
+1. manjarolinux
+2. openmpi 4.1.0
+
+## 实验目的
+
+1. 学习掌握简单的MPI分布式程序的编写
+2. 了解并行程序设计思想
+
+## 实验过程
+
+### 1. 编写使用广播函数的梯形积分法的MPI程序
+
 ~~~ c
 #ifndef TRAP_H__
 #define TRAP_H__
@@ -105,7 +118,10 @@ clean:
 	rm -rf *.o trap
 ~~~
 
-## 编写使用广播函数的梯形积分法的MPI程序(MPI_Allreduce)
+![image-20210407191434678](/home/yixingwei/.config/Typora/typora-user-images/image-20210407191434678.png)
+
+### 2. 编写使用广播函数的梯形积分法的MPI程序(MPI_Allreduce)
+
 ~~~ c
 #ifndef TRAP_H__
 #define TRAP_H__
@@ -210,8 +226,10 @@ clean:
 	rm -rf *.o trap
 ~~~
 
+![image-20210407191513904](/home/yixingwei/.config/Typora/typora-user-images/image-20210407191513904.png)
 
-##  使用广播函数编写树形通信的全局求和程序
+###  3. 使用广播函数编写树形通信的全局求和程序
+
 ~~~ c
 #include <unistd.h>
 #include <stdio.h>
@@ -245,7 +263,8 @@ int main()
         printf("localsum: %d\n",*localsum);
     }
 
-    MPI_Allreduce(localsum, sum, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Reduce(localsum, sum, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    //MPI_Allreduce(localsum, sum, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
     if (my_rank == 0){
         printf("sum = %d\n",*sum);
@@ -258,7 +277,9 @@ int main()
 
 ~~~
 
-##  使用同一缓冲区同时作为输入和输出，求得所有进程例x的全局总和，并将x的结果放在0号进程里
+![image-20210407191552436](/home/yixingwei/.config/Typora/typora-user-images/image-20210407191552436.png)
+
+####  思考 1. 使用同一缓冲区同时作为输入和输出，求得所有进程例x的全局总和，并将x的结果放在0号进程里
 
 ~~~ c
 #include <unistd.h>
@@ -305,90 +326,10 @@ int main()
 
 ~~~
 
+![image-20210407191708024](/home/yixingwei/.config/Typora/typora-user-images/image-20210407191708024.png)
 
-## 编写一个串行向量加法程序
-~~~ c
-#include <stdio.h>
-#include <stdlib.h>
+### 4. 编写一个并行向量加法程序
 
-void Read_n(int* n_p /* out */) {
-   printf("What's the order of the vectors?\n");
-   scanf("%d", n_p);
-   if (*n_p <= 0) {
-      fprintf(stderr, "Order should be positive\n");
-      exit(-1);
-   }
-}  /* Read_n */
-
-void Allocate_vectors(
-      double**  x_pp  /* out */, 
-      double**  y_pp  /* out */, 
-      double**  z_pp  /* out */, 
-      int       n     /* in  */) {
-   *x_pp = malloc(n*sizeof(double));
-   *y_pp = malloc(n*sizeof(double));
-   *z_pp = malloc(n*sizeof(double));
-   if (*x_pp == NULL || *y_pp == NULL || *z_pp == NULL) {
-      fprintf(stderr, "Can't allocate vectors\n");
-      exit(-1);
-   }
-}  /* Allocate_vectors */
-
-void Read_vector(
-      double  a[]         /* out */, 
-      int     n           /* in  */, 
-      char    vec_name[]  /* in  */) {
-   int i;
-   printf("Enter the vector %s\n", vec_name);
-   for (i = 0; i < n; i++)
-      scanf("%lf", &a[i]);
-}  /* Read_vector */  
-
-void Print_vector(
-      double  b[]     /* in */, 
-      int     n       /* in */, 
-      char    title[] /* in */) {
-   int i;
-   printf("%s\n", title);
-   for (i = 0; i < n; i++)
-      printf("%f ", b[i]);
-   printf("\n");
-}  /* Print_vector */
-
-void Vector_sum(
-      double  x[]  /* in  */, 
-      double  y[]  /* in  */, 
-      double  z[]  /* out */, 
-      int     n    /* in  */) {
-   int i;
-
-   for (i = 0; i < n; i++)
-      z[i] = x[i] + y[i];
-}  /* Vector_sum */
-
-int main(void) {
-   int n;
-   double *x, *y, *z;
-
-   Read_n(&n);
-   Allocate_vectors(&x, &y, &z, n);
-   
-   Read_vector(x, n, "x");
-   Read_vector(y, n, "y");
-   
-   Vector_sum(x, y, z, n);
-
-   Print_vector(z, n, "The sum is");
-
-   free(x);
-   free(y);
-   free(z);
-
-   return 0;
-}
-~~~
-
-## 编写一个并行向量加法程序
 ~~~ c
 #include <stdio.h>
 #include <stdlib.h>
@@ -584,7 +525,10 @@ void Parallel_vector_sum(
 }
 ~~~
 
-## 编写一个并行向量乘法程序
+![image-20210407192049882](/home/yixingwei/.config/Typora/typora-user-images/image-20210407192049882.png)
+
+### 5. 编写一个并行向量乘法程序
+
 ~~~ c
 #include <stdio.h>
 #include <stdlib.h>
@@ -683,7 +627,7 @@ void Read_matrix(
          for (j = 0; j < n; j++)
             scanf("%lf", &A[i*n+j]);
       MPI_Scatter(A, local_m*n, MPI_DOUBLE, 
-            local_A, local_m*n, MPI_DOUBLE, 0, comm);
+            local_A, local_m*n, MPI_DOUBLE, 0, comm);思考
       free(A);
    } else {
       Check_for_error(local_ok, "Read_matrix",
@@ -851,3 +795,4 @@ int main(void) {
 
 
 
+![image-20210407195945504](/home/yixingwei/.config/Typora/typora-user-images/image-20210407195945504.png)
