@@ -1,7 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include <omp.h>
+
+#ifdef _OPENMP
+# include <omp.h>
+#endif
 
 void Usage(char* prog_name);
 double f(double x);    /* Function we're integrating */
@@ -47,8 +50,13 @@ double Local_trap(double a, double b, int n) {
    double  h, x, my_result;
    double  local_a, local_b;
    int  i, local_n;
+#ifdef _OPENMP
    int my_rank = omp_get_thread_num();
    int thread_count = omp_get_num_threads();
+#else
+   int my_rank = 0;
+   int thread_count = 1;
+#endif
 
    h = (b-a)/n; 
    local_n = n/thread_count;  
