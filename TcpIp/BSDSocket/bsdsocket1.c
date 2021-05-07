@@ -20,5 +20,4 @@ int main()
         exit(1);
     }
 
-    bzero()
 }
