@@ -43,10 +43,8 @@ int main() {
     
     MPI_Reduce(&local_int, &total_int, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
-    if (my_rank == 0) {
         printf("当n = %d , 区间 (%f ,%f)的面积 = %.15e\n",
                     n ,a, b, total_int);
-    }
 
     MPI_Finalize();
 

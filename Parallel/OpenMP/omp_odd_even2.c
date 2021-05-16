@@ -1,25 +1,3 @@
-/* File:    omp_odd_even2.c
- *
- * Purpose: Use odd-even transposition sort to sort a list of ints.
- *
- * Compile: gcc -g -Wall -fopenmp -I. -o omp_odd_even2 omp_odd_even2.c
- * Usage:   ./omp_odd_even2 <thread count> <n> <g|i>
- *             n:   number of elements in list
- *            'g':  generate list using a random number generator
- *            'i':  user input list
- *
- * Input:   list (optional)
- * Output:  elapsed time for sort
- *
- * Note:
- * 1.  DEBUG flag prints the contents of the list
- * 2.  This version forks and joins the threads only once.
- * 3.  Uses the OpenMP library function omp_get_wtime for timing.
- *     This function returns the number of seconds since some time 
- *     in the past.
- *
- * IPP:  Section 5.6.2 (pp. 235 and ff.)
- */
 #include <stdio.h>
 #include <stdlib.h>
 #include <omp.h>
@@ -39,7 +17,6 @@ void Print_list(int a[], int n, char* title);
 void Read_list(int a[], int n);
 void Odd_even(int a[], int n);
 
-/*-----------------------------------------------------------------*/
 int main(int argc, char* argv[]) {
    int  n;
    char g_i;
@@ -72,10 +49,6 @@ int main(int argc, char* argv[]) {
 }  /* main */
 
 
-/*-----------------------------------------------------------------
- * Function:  Usage
- * Purpose:   Summary of how to run program
- */
 void Usage(char* prog_name) {
    fprintf(stderr, "usage:   %s <thread count> <n> <g|i>\n", prog_name);
    fprintf(stderr, "   n:   number of elements in list\n");
@@ -84,12 +57,6 @@ void Usage(char* prog_name) {
 }  /* Usage */
 
 
-/*-----------------------------------------------------------------
- * Function:  Get_args
- * Purpose:   Get and check command line arguments
- * In args:   argc, argv
- * Out args:  n_p, g_i_p
- */
 void Get_args(int argc, char* argv[], int* n_p, char* g_i_p) {
    if (argc != 4 ) {
       Usage(argv[0]);
@@ -106,12 +73,6 @@ void Get_args(int argc, char* argv[], int* n_p, char* g_i_p) {
 }  /* Get_args */
 
 
-/*-----------------------------------------------------------------
- * Function:  Generate_list
- * Purpose:   Use random number generator to generate list elements
- * In args:   n
- * Out args:  a
- */
 void Generate_list(int a[], int n) {
    int i;
 
@@ -121,11 +82,6 @@ void Generate_list(int a[], int n) {
 }  /* Generate_list */
 
 
-/*-----------------------------------------------------------------
- * Function:  Print_list
- * Purpose:   Print the elements in the list
- * In args:   a, n
- */
 void Print_list(int a[], int n, char* title) {
    int i;
 
@@ -136,12 +92,6 @@ void Print_list(int a[], int n, char* title) {
 }  /* Print_list */
 
 
-/*-----------------------------------------------------------------
- * Function:  Read_list
- * Purpose:   Read elements of list from stdin
- * In args:   n
- * Out args:  a
- */
 void Read_list(int a[], int n) {
    int i;
 
@@ -151,12 +101,6 @@ void Read_list(int a[], int n) {
 }  /* Read_list */
 
 
-/*-----------------------------------------------------------------
- * Function:     Odd_even
- * Purpose:      Sort list using odd-even transposition sort
- * In args:      n
- * In/out args:  a
- */
 void Odd_even(int a[], int n) {
    int phase, i, tmp;
 
@@ -182,5 +126,4 @@ void Odd_even(int a[], int n) {
             }
          }
    }
-}  /* Odd_even */
-
+}
