@@ -54,3 +54,11 @@ int list_delete_at(list* me, int i){}
 int list_delete(list* me,datatype* data){}
 
 int list_isempty(list* me){}
+
+int list_show(list *me){
+  if (me == NULL){
+    return;
+  }
+
+  for ()
+}
