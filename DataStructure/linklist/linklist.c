@@ -30,8 +30,20 @@ int list_insert_at(list* me, int i, datatype* data){
     j++;
   }
 
-  if (!node)
+  if (node){
+    newnode = malloc(sizeof(*newnode));
+    if (newnode == NULL){
+      return -2;
+    }
+    newnode->data = *data;
+    newnode->next = node->next;
+    node->next = newnode;
+    return 0;
 
+  }else{
+    return -3;
+
+  }
 
 }
 

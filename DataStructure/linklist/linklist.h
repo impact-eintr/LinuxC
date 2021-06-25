@@ -17,5 +17,6 @@ int list_delete_at(list*, int);
 int list_delete(list *,datatype *);
 
 int list_isempty(list*);
+void list_show(list *);
 
 #endif // LINKLIST_H_
