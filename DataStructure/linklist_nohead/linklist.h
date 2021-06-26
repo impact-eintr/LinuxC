@@ -11,9 +11,8 @@ typedef struct node_st{
 list* list_create();
 void list_destory(list*);
 
-int list_insert_at(list*, int, datatype);
-int list_order_insert(list* me, datatype data, int (*)(datatype,datatype));
-int list_delete_at(list*, int, datatype);
+// 首部插入
+int list_insert(list* me, datatype data);
 int list_delete(list* me,datatype data, int (*)(datatype, datatype));
 
 int list_isempty(list*);
