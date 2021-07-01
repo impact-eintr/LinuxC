@@ -39,7 +39,7 @@ int main(int argc,char **argv){
     message[i] = c;
   }
 
-  elapsed = ping_pong(message, 0, RES_TEST_ITERS, comm, comm_size, my_rank);
+  elapsed = ping_pong(message, 1024*1024, RES_TEST_ITERS, comm, comm_size, my_rank);
   if (my_rank == 0){
     fprintf(stderr, "Min ping_pong = %8.5e, Clock tick = %8.5e\n",
             elapsed/(2 * RES_TEST_ITERS), MPI_Wtick());
@@ -49,7 +49,7 @@ int main(int argc,char **argv){
 
 }
 
-double ping_pong(char msg[], int msg_size, int iters, MPI_Comm comm, int comm_size, int my_rank){
+double ping_pong(char *msg, int msg_size, int iters, MPI_Comm comm, int comm_size, int my_rank){
   MPI_Status status;
   double start;
 
@@ -63,7 +63,7 @@ double ping_pong(char msg[], int msg_size, int iters, MPI_Comm comm, int comm_si
   }else if (my_rank == 1){
     for (int i = 0;i < iters;i++){
       MPI_Recv(msg, msg_size, MPI_CHAR, 0, 0, comm, &status);
-      print_buf(msg, msg_size, 1);
+      //print_buf(msg, msg_size, 1);
       MPI_Send(msg, msg_size, MPI_CHAR, 0, 0, comm);
     }
   }

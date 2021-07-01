@@ -11,9 +11,9 @@
 void get(char *hname){
     struct hostent *hent;
     gethostname(hname, 128);//sizeof(hname)
-    //hent = gethostent();
+    hent = gethostent();
     hent = gethostbyname(hname);
-    //printf("hostname: %s/naddress list: ", hent->h_name);
+    printf("hostname: %s/naddress list: \n", hent->h_name);
 }
 
 int main(int argc,char *argv[])
@@ -23,7 +23,7 @@ int main(int argc,char *argv[])
     int source;/*发送者序号*/
     int dest;/*接受者序号*/
     int tag=0;/*消息标签*/
-    char message[100];/*消息储存*/
+    char message[1024];/*消息储存*/
     MPI_Status status;/*return status for*/
 
     /*receive*/
