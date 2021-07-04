@@ -26,7 +26,6 @@ int main(int argc,char *argv[])
     char message[1024];/*消息储存*/
     MPI_Status status;/*return status for*/
 
-    /*receive*/
     /*启动MPI*/
     MPI_Init(&argc,&argv);
     /*查找进程号*/

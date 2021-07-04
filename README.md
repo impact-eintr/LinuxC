@@ -143,3 +143,5 @@
 |131 |0x83| ENOTRECOVERABLE| State not recoverable|
 |132 |0x84| ERFKILL| Operation not possible due to RF-kill|
 |133 |0x85| EHWPOISON| Memory page has hardware error|
+
+EINTR
