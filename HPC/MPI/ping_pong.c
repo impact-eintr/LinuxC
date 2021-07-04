@@ -39,11 +39,16 @@ int main(int argc,char **argv){
     message[i] = c;
   }
 
-  elapsed = ping_pong(message, 1024*1024, RES_TEST_ITERS, comm, comm_size, my_rank);
-  if (my_rank == 0){
-    fprintf(stderr, "Min ping_pong = %8.5e, Clock tick = %8.5e\n",
-            elapsed/(2 * RES_TEST_ITERS), MPI_Wtick());
+
+
+  for(int j = 0;j < 20;j++){
+    elapsed = ping_pong(message, 0, RES_TEST_ITERS, comm, comm_size, my_rank);
+    if (my_rank == 0){
+      fprintf(stderr, "Min ping_pong = %8.5e, Clock tick = %8.5e\n",
+              elapsed/(2 * RES_TEST_ITERS), MPI_Wtick());
+    }
   }
+
   MPI_Finalize();
   exit(0);
 
