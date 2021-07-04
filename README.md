@@ -144,5 +144,4 @@
 |132 |0x84| ERFKILL| Operation not possible due to RF-kill|
 |133 |0x85| EHWPOISON| Memory page has hardware error|
 
-
-SanLei
+EINTR
