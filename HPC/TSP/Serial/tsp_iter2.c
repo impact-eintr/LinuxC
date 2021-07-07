@@ -44,9 +44,9 @@ const int TRUE = 1;
 typedef int city_t;
 typedef int cost_t;
 typedef struct {
-   city_t* cities; /* Cities in partial tour           */
-   int count;      /* Number of cities in partial tour */
-   cost_t cost;    /* Cost of partial tour             */
+  city_t* cities; /* Cities in partial tour           */
+  int count;      /* Number of cities in partial tour */
+  cost_t cost;    /* Cost of partial tour             */
 } tour_struct;
 typedef tour_struct* tour_t;
 #define City_count(tour) (tour->count)
@@ -55,8 +55,8 @@ typedef tour_struct* tour_t;
 #define Tour_city(tour,i) (tour->cities[(i)])
 
 typedef struct {
-   tour_t* list;
-   int list_sz;
+  tour_t* list;
+  int list_sz;
 }  stack_struct;
 typedef stack_struct* my_stack_t;
 
@@ -93,54 +93,56 @@ int  Empty(my_stack_t stack);
 void Free_stack(my_stack_t stack);
 void Free_avail(void);
 
+#define DEBUG
+
 /*------------------------------------------------------------------*/
 int main(int argc, char* argv[]) {
-   FILE* digraph_file;
-   tour_t tour;
-   double start, finish;
+  FILE* digraph_file;
+  tour_t tour;
+  double start, finish;
 
-   if (argc != 2) Usage(argv[0]);
-   digraph_file = fopen(argv[1], "r");
-   if (digraph_file == NULL) {
-      fprintf(stderr, "Can't open %s\n", argv[1]);
-      Usage(argv[0]);
-   }
-   Read_digraph(digraph_file);
-   fclose(digraph_file);
+  if (argc != 2) Usage(argv[0]);
+  digraph_file = fopen(argv[1], "r");
+  if (digraph_file == NULL) {
+    fprintf(stderr, "Can't open %s\n", argv[1]);
+    Usage(argv[0]);
+  }
+  Read_digraph(digraph_file);
+  fclose(digraph_file);
 #  ifdef DEBUG
-   Print_digraph();
+  Print_digraph();
 #  endif   
-   avail = Init_stack();
+  avail = Init_stack();
 
-   best_tour = Alloc_tour();
-   Init_tour(best_tour, INFINITY);
+  best_tour = Alloc_tour();
+  Init_tour(best_tour, INFINITY);
 #  ifdef DEBUG
-   Print_tour(best_tour, "Best tour");
-   printf("City count = %d\n",  City_count(best_tour));
-   printf("Cost = %d\n\n", Tour_cost(best_tour));
+  Print_tour(best_tour, "Best tour");
+  printf("City count = %d\n",  City_count(best_tour));
+  printf("Cost = %d\n\n", Tour_cost(best_tour));
 #  endif
-   tour = Alloc_tour();
-   Init_tour(tour, 0);
+  tour = Alloc_tour();
+  Init_tour(tour, 0);
 #  ifdef DEBUG
-   Print_tour(tour, "Starting tour");
-   printf("City count = %d\n",  City_count(tour));
-   printf("Cost = %d\n\n", Tour_cost(tour));
+  Print_tour(tour, "Starting tour");
+  printf("City count = %d\n",  City_count(tour));
+  printf("Cost = %d\n\n", Tour_cost(tour));
 #  endif
 
-   GET_TIME(start);
-   Iterative_dfs(tour);
-   GET_TIME(finish);
-   Free_tour(tour);
-   
-   Print_tour(best_tour, "Best tour");
-   printf("Cost = %d\n", best_tour->cost);
-   printf("Elapsed time = %e seconds\n", finish-start);
+  GET_TIME(start);
+  Iterative_dfs(tour);
+  GET_TIME(finish);
+  Free_tour(tour);
 
-   free(best_tour->cities);
-   free(best_tour);
-   Free_avail();
-   free(digraph);
-   return 0;
+  Print_tour(best_tour, "Best tour");
+  printf("Cost = %d\n", best_tour->cost);
+  printf("Elapsed time = %e seconds\n", finish-start);
+
+  free(best_tour->cities);
+  free(best_tour);
+  Free_avail();
+  free(digraph);
+  return 0;
 }  /* main */
 
 /*------------------------------------------------------------------
@@ -154,14 +156,14 @@ int main(int argc, char* argv[]) {
  *    tour
  */
 void Init_tour(tour_t tour, cost_t cost) {
-   int i;
+  int i;
 
-   tour->cities[0] = 0;
-   for (i = 1; i <= n; i++) {
-      tour->cities[i] = NO_CITY;
-   }
-   tour->cost = cost;
-   tour->count = 1;
+  tour->cities[0] = 0;
+  for (i = 1; i <= n; i++) {
+    tour->cities[i] = NO_CITY;
+  }
+  tour->cost = cost;
+  tour->count = 1;
 }  /* Init_tour */
 
 
@@ -171,8 +173,8 @@ void Init_tour(tour_t tour, cost_t cost) {
  * In arg:    prog_name
  */
 void Usage(char* prog_name) {
-   fprintf(stderr, "usage: %s <digraph file>\n", prog_name);
-   exit(0);
+  fprintf(stderr, "usage: %s <digraph file>\n", prog_name);
+  exit(0);
 }  /* Usage */
 
 /*------------------------------------------------------------------
@@ -184,27 +186,27 @@ void Usage(char* prog_name) {
  *    digraph:  the matrix file
  */
 void Read_digraph(FILE* digraph_file) {
-   int i, j;
+  int i, j;
 
-   fscanf(digraph_file, "%d", &n);
-   if (n <= 0) {
-      fprintf(stderr, "Number of vertices in digraph must be positive\n");
+  fscanf(digraph_file, "%d", &n);
+  if (n <= 0) {
+    fprintf(stderr, "Number of vertices in digraph must be positive\n");
+    exit(-1);
+  }
+  digraph = malloc(n*n*sizeof(cost_t));
+
+  for (i = 0; i < n; i++)
+  for (j = 0; j < n; j++) {
+    fscanf(digraph_file, "%d", &digraph[i*n + j]);
+    if (i == j && digraph[i*n + j] != 0) {
+      fprintf(stderr, "Diagonal entries must be zero\n");
       exit(-1);
-   }
-   digraph = malloc(n*n*sizeof(cost_t));
-
-   for (i = 0; i < n; i++)
-      for (j = 0; j < n; j++) {
-         fscanf(digraph_file, "%d", &digraph[i*n + j]);
-         if (i == j && digraph[i*n + j] != 0) {
-            fprintf(stderr, "Diagonal entries must be zero\n");
-            exit(-1);
-         } else if (i != j && digraph[i*n + j] <= 0) {
-            fprintf(stderr, "Off-diagonal entries must be positive\n");
-            fprintf(stderr, "diagraph[%d,%d] = %d\n", i, j, digraph[i*n+j]);
-            exit(-1);
-         }
-      }
+    } else if (i != j && digraph[i*n + j] <= 0) {
+      fprintf(stderr, "Off-diagonal entries must be positive\n");
+      fprintf(stderr, "diagraph[%d,%d] = %d\n", i, j, digraph[i*n+j]);
+      exit(-1);
+    }
+  }
 }  /* Read_digraph */
 
 
@@ -216,16 +218,16 @@ void Read_digraph(FILE* digraph_file) {
  *    digraph:  digraph of costs
  */
 void Print_digraph(void) {
-   int i, j;
+  int i, j;
 
-   printf("Order = %d\n", n);
-   printf("Matrix = \n");
-   for (i = 0; i < n; i++) {
-      for (j = 0; j < n; j++)
-         printf("%2d ", digraph[i*n+j]);
-      printf("\n");
-   }
-   printf("\n");
+  printf("Order = %d\n", n);
+  printf("Matrix = \n");
+  for (i = 0; i < n; i++) {
+    for (j = 0; j < n; j++)
+    printf("%2d ", digraph[i*n+j]);
+    printf("\n");
+  }
+  printf("\n");
 }  /* Print_digraph */
 
 
@@ -244,33 +246,33 @@ void Print_digraph(void) {
  *    best_tour
  */
 void Iterative_dfs(tour_t tour) {
-   city_t nbr;
-   my_stack_t stack;
-   tour_t curr_tour;
+  city_t nbr;
+  my_stack_t stack;
+  tour_t curr_tour;
 
-   stack = Init_stack();
-   Push(stack, tour);
-   while (!Empty(stack)) {
-      curr_tour = Pop(stack);
+  stack = Init_stack();
+  Push(stack, tour);
+  while (!Empty(stack)) {
+    curr_tour = Pop(stack);
 #     ifdef DEBUG
-      printf("Popped tour = %p and %p\n", curr_tour, curr_tour->cities);
-      Print_tour(curr_tour, "Popped");
-      printf("\n");
+    printf("Popped tour = %p and %p\n", curr_tour, curr_tour->cities);
+    Print_tour(curr_tour, "Popped");
+    printf("\n");
 #     endif
-      if (City_count(curr_tour) == n) {
-         if (Best_tour(curr_tour))
-            Update_best_tour(curr_tour);
-      } else {
-         for (nbr = n-1; nbr >= 1; nbr--) 
-            if (Feasible(curr_tour, nbr)) {
-               Add_city(curr_tour, nbr);
-               Push(stack, curr_tour);
-               Remove_last_city(curr_tour);
-            }
+    if (City_count(curr_tour) == n) {
+      if (Best_tour(curr_tour))
+      Update_best_tour(curr_tour);
+    } else {
+      for (nbr = n-1; nbr >= 1; nbr--) 
+      if (Feasible(curr_tour, nbr)) {
+        Add_city(curr_tour, nbr);
+        Push(stack, curr_tour);
+        Remove_last_city(curr_tour);
       }
-      Free_tour(curr_tour);
-   }
-   Free_stack(stack);
+    }
+    Free_tour(curr_tour);
+  }
+  Free_stack(stack);
 }  /* Iterative_dfs */
 
 /*------------------------------------------------------------------
@@ -283,13 +285,13 @@ void Iterative_dfs(tour_t tour) {
  *    TRUE if best tour, FALSE otherwise
  */
 int Best_tour(tour_t tour) {
-   cost_t cost_so_far = Tour_cost(tour);
-   city_t last_city = Last_city(tour);
+  cost_t cost_so_far = Tour_cost(tour);
+  city_t last_city = Last_city(tour);
 
-   if (cost_so_far + Cost(last_city, home_town) < Tour_cost(best_tour))
-      return TRUE;
-   else
-      return FALSE;
+  if (cost_so_far + Cost(last_city, home_town) < Tour_cost(best_tour))
+  return TRUE;
+  else
+  return FALSE;
 }  /* Best_tour */
 
 /*------------------------------------------------------------------
@@ -306,8 +308,8 @@ int Best_tour(tour_t tour) {
  *    Add_city(best_tour, hometown) before returning.
  */
 void Update_best_tour(tour_t tour) {
-   Copy_tour(tour, best_tour);
-   Add_city(best_tour, home_town);
+  Copy_tour(tour, best_tour);
+  Add_city(best_tour, home_town);
 }  /* Update_best_tour */
 
 
@@ -320,13 +322,13 @@ void Update_best_tour(tour_t tour) {
  *    tour2
  */
 void Copy_tour(tour_t tour1, tour_t tour2) {
-// int i;
+  // int i;
 
-   memcpy(tour2->cities, tour1->cities, (n+1)*sizeof(city_t));
-// for (i = 0; i <= n; i++)
-//   tour2->cities[i] =  tour1->cities[i];
-   tour2->count = tour1->count;
-   tour2->cost = tour1->cost;
+  memcpy(tour2->cities, tour1->cities, (n+1)*sizeof(city_t));
+  // for (i = 0; i <= n; i++)
+  //   tour2->cities[i] =  tour1->cities[i];
+  tour2->count = tour1->count;
+  tour2->cost = tour1->cost;
 }  /* Copy_tour */
 
 /*------------------------------------------------------------------
@@ -339,10 +341,10 @@ void Copy_tour(tour_t tour1, tour_t tour2) {
  * Note: This should only be called if tour->count >= 1.
  */
 void Add_city(tour_t tour, city_t new_city) {
-   city_t old_last_city = Last_city(tour);
-   tour->cities[tour->count] = new_city;
-   (tour->count)++;
-   tour->cost += Cost(old_last_city,new_city);
+  city_t old_last_city = Last_city(tour);
+  tour->cities[tour->count] = new_city;
+  (tour->count)++;
+  tour->cost += Cost(old_last_city,new_city);
 }  /* Add_city */
 
 /*------------------------------------------------------------------
@@ -355,13 +357,13 @@ void Add_city(tour_t tour, city_t new_city) {
  *    i.e., the hometown in tour->cities[0] won't be removed.
  */
 void Remove_last_city(tour_t tour) {
-   city_t old_last_city = Last_city(tour);
-   city_t new_last_city;
-   
-   tour->cities[tour->count-1] = NO_CITY;
-   (tour->count)--;
-   new_last_city = Last_city(tour);
-   tour->cost -= Cost(new_last_city,old_last_city);
+  city_t old_last_city = Last_city(tour);
+  city_t new_last_city;
+
+  tour->cities[tour->count-1] = NO_CITY;
+  (tour->count)--;
+  new_last_city = Last_city(tour);
+  tour->cost -= Cost(new_last_city,old_last_city);
 }  /* Remove_last_city */
 
 /*------------------------------------------------------------------
@@ -379,13 +381,13 @@ void Remove_last_city(tour_t tour) {
  *            FALSE otherwise
  */
 int Feasible(tour_t tour, city_t city) {
-   city_t last_city = Last_city(tour);
+  city_t last_city = Last_city(tour);
 
-   if (!Visited(tour, city) && 
+  if (!Visited(tour, city) && 
         Tour_cost(tour) + Cost(last_city,city) < Tour_cost(best_tour))
-      return TRUE;
-   else
-      return FALSE;
+  return TRUE;
+  else
+  return FALSE;
 }  /* Feasible */
 
 
@@ -398,11 +400,11 @@ int Feasible(tour_t tour, city_t city) {
  *             FALSE otherwise
  */
 int Visited(tour_t tour, city_t city) {
-   int i;
+  int i;
 
-   for (i = 0; i < City_count(tour); i++)
-      if ( Tour_city(tour,i) == city ) return TRUE;
-   return FALSE;
+  for (i = 0; i < City_count(tour); i++)
+  if ( Tour_city(tour,i) == city ) return TRUE;
+  return FALSE;
 }  /* Visited */
 
 
@@ -412,12 +414,12 @@ int Visited(tour_t tour, city_t city) {
  * In args:   All
  */
 void Print_tour(tour_t tour, char* title) {
-   int i;
+  int i;
 
-   printf("%s:\n", title);
-   for (i = 0; i < City_count(tour); i++)
-      printf("%d ", Tour_city(tour,i));
-   printf("\n");
+  printf("%s:\n", title);
+  for (i = 0; i < City_count(tour); i++)
+  printf("%d ", Tour_city(tour,i));
+  printf("\n");
 }  /* Print_tour */
 
 /*------------------------------------------------------------------
@@ -428,15 +430,15 @@ void Print_tour(tour_t tour, char* title) {
  *            members
  */
 tour_t Alloc_tour(void) {
-   tour_t tmp;
+  tour_t tmp;
 
-   if (!Empty(avail))
-      return Pop(avail);
-   else {
-      tmp = malloc(sizeof(tour_struct));
-      tmp->cities = malloc((n+1)*sizeof(city_t));
-      return tmp;
-   }
+  if (!Empty(avail))
+  return Pop(avail);
+  else {
+    tmp = malloc(sizeof(tour_struct));
+    tmp->cities = malloc((n+1)*sizeof(city_t));
+    return tmp;
+  }
 }  /* Alloc_tour */
 
 /*------------------------------------------------------------------
@@ -445,7 +447,7 @@ tour_t Alloc_tour(void) {
  * In arg:    tour
  */
 void Free_tour(tour_t tour) {
-   Push_avail(tour);
+  Push_avail(tour);
 }  /* Free_tour */
 
 /*------------------------------------------------------------------
@@ -454,15 +456,15 @@ void Free_tour(tour_t tour) {
  * Out arg:  stack_p
  */
 my_stack_t Init_stack(void) {
-   int i;
+  int i;
 
-   my_stack_t stack = malloc(sizeof(stack_struct));
-   stack->list = malloc(n*n*sizeof(tour_t));
-   for (i = 0; i < n*n; i++)
-      stack->list[i] = NULL;
-   stack->list_sz = 0;
+  my_stack_t stack = malloc(sizeof(stack_struct));
+  stack->list = malloc(n*n*sizeof(tour_t));
+  for (i = 0; i < n*n; i++)
+  stack->list[i] = NULL;
+  stack->list_sz = 0;
 
-   return stack;
+  return stack;
 }  /* Init_stack */
 
 
@@ -473,20 +475,20 @@ my_stack_t Init_stack(void) {
  * In/out Global:  
  */
 void Push_avail(tour_t tour) {
-   if (avail->list_sz == n*n) {
-      fprintf(stderr, "Available stack overflow!\n");
-      free(tour->cities);
-      free(tour);
-   } else {
+  if (avail->list_sz == n*n) {
+    fprintf(stderr, "Available stack overflow!\n");
+    free(tour->cities);
+    free(tour);
+  } else {
 #     ifdef DEBUG
-      printf("In Push_avail, loc = %d, pushing %p and %p\n",
-            avail->list_sz, tour, tour->cities);
-      Print_tour(tour, "About to be pushed onto avail");
-      printf("\n");
+    printf("In Push_avail, loc = %d, pushing %p and %p\n",
+          avail->list_sz, tour, tour->cities);
+    Print_tour(tour, "About to be pushed onto avail");
+    printf("\n");
 #     endif
-      avail->list[avail->list_sz] = tour;
-      (avail->list_sz)++;
-   }
+    avail->list[avail->list_sz] = tour;
+    (avail->list_sz)++;
+  }
 }  /* Push_avail */
 
 /*------------------------------------------------------------------
@@ -497,15 +499,15 @@ void Push_avail(tour_t tour) {
  * Error:       If the stack is full, print an error and exit
  */
 void Push(my_stack_t stack, tour_t tour) {
-   tour_t tmp;
-   if (stack->list_sz == n*n) {
-      fprintf(stderr, "Stack overflow!\n");
-      exit(-1);
-   }
-   tmp = Alloc_tour();
-   Copy_tour(tour, tmp);
-   stack->list[stack->list_sz] = tmp;
-   (stack->list_sz)++;
+  tour_t tmp;
+  if (stack->list_sz == n*n) {
+    fprintf(stderr, "Stack overflow!\n");
+    exit(-1);
+  }
+  tmp = Alloc_tour();
+  Copy_tour(tour, tmp);
+  stack->list[stack->list_sz] = tmp;
+  (stack->list_sz)++;
 }  /* Push */
 
 
@@ -517,16 +519,16 @@ void Push(my_stack_t stack, tour_t tour) {
  * Error:     If the stack is empty, print a message and exit
  */
 tour_t Pop(my_stack_t stack) {
-   tour_t tmp;
+  tour_t tmp;
 
-   if (stack->list_sz == 0) {
-      fprintf(stderr, "Trying to pop empty stack!\n");
-      exit(-1);
-   }
-   tmp = stack->list[stack->list_sz-1];
-   stack->list[stack->list_sz-1] = NULL;
-   (stack->list_sz)--;
-   return tmp;
+  if (stack->list_sz == 0) {
+    fprintf(stderr, "Trying to pop empty stack!\n");
+    exit(-1);
+  }
+  tmp = stack->list[stack->list_sz-1];
+  stack->list[stack->list_sz-1] = NULL;
+  (stack->list_sz)--;
+  return tmp;
 }  /* Pop */
 
 
@@ -537,10 +539,10 @@ tour_t Pop(my_stack_t stack) {
  * Ret val:   TRUE if empty, FALSE otherwise
  */
 int  Empty(my_stack_t stack) {
-   if (stack->list_sz == 0)
-      return TRUE;
-   else
-      return FALSE;
+  if (stack->list_sz == 0)
+  return TRUE;
+  else
+  return FALSE;
 }  /* Empty */
 
 
@@ -551,8 +553,8 @@ int  Empty(my_stack_t stack) {
  * Note:      Assumes stack is empty
  */
 void Free_stack(my_stack_t stack) {
-   free(stack->list);
-   free(stack);
+  free(stack->list);
+  free(stack);
 }  /* Free_stack */
 
 /*------------------------------------------------------------------
@@ -561,22 +563,22 @@ void Free_stack(my_stack_t stack) {
  * Out arg:   avail
  */
 void Free_avail(void) {
-   int i;
-   tour_t tmp;
+  int i;
+  tour_t tmp;
 #  ifdef DEBUG
-   printf("In Free_avail, list_sz = %d\n", avail->list_sz);
+  printf("In Free_avail, list_sz = %d\n", avail->list_sz);
 #  endif
-   for (i = 0; i < avail->list_sz; i++) {
-      tmp = avail->list[i];
-      if (tmp != NULL) {
+  for (i = 0; i < avail->list_sz; i++) {
+    tmp = avail->list[i];
+    if (tmp != NULL) {
 #        ifdef DEBUG
-         printf("In Free_avail, i = %d, attempting to free %p and %p\n",
-               i, tmp->cities, tmp);
+      printf("In Free_avail, i = %d, attempting to free %p and %p\n",
+            i, tmp->cities, tmp);
 #        endif
-         free(tmp->cities);
-         free(tmp);
-      }
-   }
-   free(avail->list);
-   free(avail);
+      free(tmp->cities);
+      free(tmp);
+    }
+  }
+  free(avail->list);
+  free(avail);
 }  /* Free_avail */
