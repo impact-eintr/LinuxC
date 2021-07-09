@@ -51,7 +51,6 @@ int main(int argc, char* argv[]) {
 	return 0;
 }
 
-/*------------------------------- ~@~T---------*/
 double ping_pong(char mesg[], int mesg_size, int iters, MPI_Comm comm,
                 int p, int my_rank){
         int i;
