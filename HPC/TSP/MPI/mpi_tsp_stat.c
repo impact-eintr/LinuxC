@@ -41,8 +41,6 @@
 #include <string.h>
 #include <mpi.h>
 
-#define DEBUG
-
 const int INFINITY = 1000000;
 const int NO_CITY = -1;
 const int FALSE = 0;
@@ -424,6 +422,7 @@ void Partition_tree(my_stack_t stack) {
 
    if (my_rank == 0) 
       Build_initial_queue(&queue_list, queue_size, &init_tour_count);
+
    MPI_Bcast(&init_tour_count, 1, MPI_INT, 0, comm);
 
    Set_init_tours(init_tour_count, counts, displacements, 
