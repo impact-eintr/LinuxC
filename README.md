@@ -1,14 +1,13 @@
 # LinuxC
+- 目录 OS 是操作系统的学习笔记(更新中)
 - 目录 APUE 是《APUE》的部分学习笔记(完结)
-- 目录 DataStructure 是数据结构 的学习笔记(正在更新)
+- 目录 DataStructure 是数据结构 的学习笔记(TODO)
 - 目录 C 是GNU C 的学习笔记(TODO)
 
-- 对应课程[https://www.bilibili.com/video/BV18p4y167Md](https://www.bilibili.com/video/BV18p4y167Md)
-# 安装
 
-``` bash
-git clone https://github.com/impact-eintr/LinuxC.git --depth 1
-```
+- 对应课程[https://www.bilibili.com/video/BV18p4y167Md](https://www.bilibili.com/video/BV18p4y167Md)
+- 操作系统对应课程[操作系统实战45讲](https://time.geekbang.org/column/intro/100078401?tab=catalog)
+
 
 ## 注意
 **不要上传二进制文件！**
