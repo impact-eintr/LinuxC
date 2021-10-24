@@ -404,7 +404,6 @@ int main() {
 
 ```
 
-
 #### 位运算
 
 - | 按位或
@@ -413,8 +412,118 @@ int main() {
 - ~ 按位取反
 
 > 应用
+
 将操作数中的第n位置1 其他位不变 num = num | 1 << n;
 将操作数中的第n位置0 其他位不变 num = num & ~(1<<n);
 测试第n位: if(num & (1<<n))
+
+
+## IO
+- printf
+
+#### 变长参数 
+
+``` c++
+int main() {
+  int i = 123;
+  printf("%4d\n", i);
+  
+  float f = 1.23455;
+  printf("%.3f\n", f);
+  
+  char* s= "helloworld";
+  printf("%10.5s\n", s);
+}
+```
+
+#### 刷新缓冲区
+
+
+``` c++
+int main() {
+  printf("[%s:%d] before while().", __FUNCTION__, __LINE__);
+  while(1);
+  printf("[%s:%d] after while().", __FUNCTION__, __LINE__);
+}
+```
+
+正确写法
+``` c++
+#include <stdlib.h>
+#include <stdio.h>
+
+int main() {
+  printf("[%s:%d] before while().]\n", __FUNCTION__, __LINE__);
+  // 或者
+  //printf("[%s:%d] before while().", __FUNCTION__, __LINE__);
+  //fflush(stdout); 
+  while(1);
+  printf("[%s:%d] after while().", __FUNCTION__, __LINE__);
+}
+
+```
+
+- scanf
+
+``` c++
+int main() {
+  int i;
+  scanf("%d", &i);
+  printf("%d\n", i);
+}
+```
+
+> scanf 在使用 `%s` 的时候要特别小心
+
+``` c++
+#include <stdio.h>
+#include <stdlib.h>
+
+int main() {
+  char S[3];
+
+  scanf("%s", S); // 如果输入 abcdef
+  printf("%s", S); // 可能会出现段错误
+}
+
+```
+
+> scanf 在循环中使用的时候要特别小心
+
+``` c++
+int main() {
+  int ret = 0;
+  int d = 0;
+  
+  while(1) {
+    ret = scanf("%d, d);
+    if (ret == -1) {
+      perror("Error");
+      break;
+    }
+    printf("&d\n", d);
+  }
+  exit(0);
+}
+```
+
+> 处理换行
+
+``` c++
+int main() {
+  int i = 0;
+  char c = 0;
+  
+  scanf("%d", &i);
+  scanf("%*c%c", &c);
+  // 或者
+  //getchar();
+  //scanf("%c", &c);
+  printf("i = %d, c = %c", i, c);
+}
+```
+
+
+# 流程控制
 
 
