@@ -932,18 +932,195 @@ int main() {
 
 # 函数
 
+## 函数的定义
+
+``` c++
+#include <stdlib.h>
+#include <stdio.h>
+
+int main() {
+  exit(printf("Hello!\n"));
+}
+
+```
+
+## 函数的传参
+- 值传递
+- 地址传递
+- 全局变量
+
+## 函数的调用
+- 嵌套
+
+``` c++
+#include <stdlib.h>
+#include <stdio.h>
+
+int max(int a, int b, int c) {
+  int tmp = a > b ? a : b;
+  return tmp > c ? tmp : c;
+}
+
+int min(int a, int b, int c) {
+  int tmp = a < b ? a : b;
+  return tmp < c ? tmp : c;
+}
+
+int dist(int a, int b, int c) {
+  return max(a, b, c) - min(a, b, c);
+}
+
+int main() {
+  printf("%d\n", dist(8, 5, 10));
+}
+
+```
+
+- 递归
+
+``` c++
+#include <stdio.h>
+#include <stdlib.h>
+
+int func(int n) {
+  if (n < 0) {
+    return -1;
+  }
+  if (n == 1 || n == 2) {
+    return 1;
+  }
+  return func(n-1) + func(n-2);
+}
+
+int main() {
+  int n;
+  scanf("%d", &n);
+  printf("fib %d = %d", n, func(n));
+  exit(0);
+}
+
+```
 
 
+``` c++
+#include <stdio.h>
+#include <stdlib.h>
 
+int func(int n) {
+  if (n < 0) {
+    return -1;
+  }
+  if (n == 0 || n == -1) {
+    return 1;
+  }
+  return n * func(n - 1);
+}
 
+int main() {
+  int n;
+  scanf("%d", &n);
+  printf("%d! = %d", n, func(n));
+  exit(0);
+}
 
+```
 
+## 函数与数组
 
+``` c++
+#include <stdlib.h>
+#include <stdio.h>
 
+// 注意这里的int *arr 的大小是8个字节 是一个普通的指针不是数组 所以一定要传大小
+void printarr(int *arr, int size) {
+  for (int i = 0;i < size;i++) {
+    printf("%d ", *(arr+i));
+  }
+  printf("\n");
+}
 
+int main() {
+  int arr[] = {1, 2, 3, 4, 5};
+  printarr(arr, sizeof(arr)/sizeof(*arr));
+}
 
+```
 
+``` c++
+#include <stdlib.h>
+#include <stdio.h>
 
+void printarr(int *arr, int size) {
+  for (int i = 0;i < size;i++) {
+    printf("%d ", *(arr+i));
+  }
+  printf("\n");
+}
+
+void printarr2(int (*p)[3], int m , int n) {
+  for (int i = 0;i < m;i++) {
+    for (int j =0;j < n;j++) {
+      printf("%4d ", *(*(p+i)+j));
+    }
+    printf("\n");
+  }
+}
+
+int main() {
+  int arr[][3] = {1, 2, 3, 4, 5, 6};
+  printarr2(arr, 2, 3);
+}
+
+```
+
+## 函数的指针
+- 指针函数
+
+``` c++
+#include <stdio.h>
+#include <stdlib.h>
+
+#define M 2
+#define N 3
+
+int *findnum(int (*p)[N], int num) {
+  if (num > M - 1) {
+    return NULL;
+  }
+  return *(p + num);
+}
+
+int main() {
+  int arr[M][N] = {{1, 2, 3},{ 4, 5, 6}};
+
+  int *res = findnum(arr, 1);
+
+  for (int i = 0; i < N; i++) {
+    printf("%d ", *(res + i));
+  }
+}
+
+```
+
+- 函数指针
+`类型 (*指针名)(形参)`
+
+- 函数指针数组
+`类型 (*数组名[下标]) (形参)`
+
+指向指针函数的函数指针数组
+
+``` c++
+int *(*funcp[N])(int)
+```
+
+实际例子
+``` c++
+int pthread_create(pthread_t *restrict thread,
+                          const pthread_attr_t *restrict attr,
+                          void *(*start_routine)(void *),
+                          void *restrict arg);
+```
 
 # 构造类型
 
@@ -953,6 +1130,12 @@ int main() {
 
 
 
+
+
+
+
+
+# Makefile
 
 
 
