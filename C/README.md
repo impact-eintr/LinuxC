@@ -525,5 +525,249 @@ int main() {
 
 
 # 流程控制
+跳过
+
+# 数组
+构造类型 连续存放
+## 一维数组
+[存储类型] 数据类型 标识符[下标]
+### 初始化
+
+- static
+
+``` c++
+static int a[10];
+```
+
+- {}
+
+``` c++
+int a[3] = {1, 2, 3};
+```
+
+### 元素引用
+- arr[i]
+- arr+i
+
+#### 数组名
+
+一个**常量**
+
+``` c++
+#include <stdio.h>
+#include <stdlib.h>
+
+int main() {
+  int arr[3] = {1, 2, 3};
+  printf("%ld\n", sizeof(arr));
+  // 下面这句是错的
+  arr = {4, 5, 6};
+  for (int i = 0;i < sizeof(arr)/sizeof(int);i++) {
+    printf("%d", *(arr+i));
+  }
+}
+
+```
+
+
+
+### 数组越界
+c对数组不进行越界检查，需要格外小心
+
+### 练习
+
+``` c++
+#include <stdio.h>
+#include <stdlib.h>
+
+int main() {
+  int fib[10] = {1, 1};
+
+  for (int i = 2;i < 10;i++) {
+    fib[i] = fib[i-1]+ fib[i-2];
+  }
+  for (int i = 0;i < 10;i++) {
+    printf("%d ", fib[i]);
+  }
+}
+
+```
+
+
+``` c++
+#include <stdio.h>
+#include <stdlib.h>
+
+int main() {
+  int arr[] = {2, 3, 5, 4, 6, 7, 1, 9};
+  for (int i = 0;i < sizeof(arr)/sizeof(int);i++) {
+    for (int j = 0;j < sizeof(arr)/sizeof(int)-1-i;j++) {
+      if(arr[j] > arr[j+1]) {
+        int tmp = arr[j];
+        arr[j] = arr[j+1];
+        arr[j+1] = tmp;
+      }
+    }
+  }
+  for (int i = 0;i < sizeof(arr)/sizeof(int);i++) {
+    printf("%d ", arr[i]);
+  }
+}
+
+```
+
+``` c++
+#include <stdio.h>
+#include <stdlib.h>
+
+int main() {
+  int arr[] = {3, 2, 5, 4, 9, 7, 1, 6};
+  for (int i = 0;i < sizeof(arr)/sizeof(int);i++) {
+    int m = i;
+    for (int j = i+1;j < sizeof(arr)/sizeof(int);j++) {
+      if(arr[j] < arr[m]) {
+        m = j;
+      }
+    }
+    if (m != i) {
+      int tmp = arr[i];
+      arr[i] = arr[m];
+      arr[m] = tmp;
+    }
+  }
+  for (int i = 0; i < sizeof(arr) / sizeof(int); i++) {
+    printf("%d ", arr[i]);
+  }
+}
+
+```
+
+
+
+## 二维数组
+[存储类型] 数据类型 标识符[行下标][列下标]
+
+``` c++
+int main() {
+  int a[M][N] = {1, 2, 3, 4, 5};
+  int b[][N] = {1, 2, 3, 4, 5};
+  int c[M][] = {1, 2, 3, 4, 5}; // 错误
+  for (int i = 0;i < M;i++) {
+    for (int j = 0;j < N;j++) {
+      printf("%d ", *(a+i+j*));
+    }
+  }
+}
+```
+
+#### 深入理解二维数组
+a[2][3] = b[3] + c[3]
+a[0] = b[0]
+a[1] = c[0]
+
+
+## 字符数组
+### 定义以及初始化
+[存储类型] char 标识符[]
+
+**注意部分初始化的时候，剩余部分会自动初始化为'\0'**
+
+### IO
+scanf 无法获取带有分隔符的字符串(`\t`, `\n`, ` `)
+
+
+### 常用函数
+- strlen & sizeof
+- strcpy & strncpy
+- strcat & strncat
+- strcmp & strncmp
+
+> 单词统计
+
+``` c++
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define STRSIZE 1024
+
+int main() {
+  char str[STRSIZE] = {};
+  fgets(str, STRSIZE, stdin);
+  int count= 0, flag = 0;
+
+  for (int i = 0;str[i] != '\0';i++){
+    if (str[i] == ' ') {
+      flag = 0;
+    } else if(!flag) {
+      count++;
+      flag = 1;
+    }
+  }
+  printf("%d\n", count);
+}
+
+```
+
+# 指针
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 函数
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 构造类型
+
+
+
 
 
