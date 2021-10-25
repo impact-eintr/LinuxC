@@ -711,31 +711,224 @@ int main() {
 
 # 指针
 
+64位环境 指针类型占用8个字节
+32位环境 指针类型占用4个字节
+
+## 变量与地址
+变量对某块内存的抽象表示
+指针 == 地址 变量名 == 抽象出来的某块空间的别名
+
+## 指针与指针变量
+
+``` c++
+int i = 1;
+int *p = &i;
+int ** q = &p;
+
+
+```
+
+## 直接访问与间接访问
+
+``` c++
+i = 1;
+&i = 0x2000;
+p = 0x2000;
+&p = 0x3000;
+*p = 1;
+q = 0x3000;
+&q = 0x4000;
+*q = 0x2000;
+**q = 1;
+```
+
+## 空指针与野指针
 
 
 
+## 空类型
+
+``` c++
+char *s = "hello";
+void *i = s;
+```
+
+## 定义与初始化的写法
 
 
+## 指针运算
+& * 关系运算 ++ --
+
+## 指针与数组
+
+### 指针与一维数组
+
+``` c++
+#include <stdlib.h>
+#include <stdio.h>
+
+int main () {
+  int a[3] = {1, 2, 3};
+  // a是常量 p是变量
+  int *p = a;
+
+  for (int i = 0;i < sizeof(a)/sizeof(*a);i++) {
+    printf("%p -> %d\n", p+i, *(p+i));
+  }
+}
+
+```
+
+**`p++` != `p+1`**
+
+``` c++
+#include <stdlib.h>
+#include <stdio.h>
+
+int main () {
+  int a[3];
+  int *p = a;
+
+  for (int i = 0;i < sizeof(a)/sizeof(*a);i++) {
+    scanf("%d", p++);
+  }
+
+  for (int i = 0;i < sizeof(a)/sizeof(*a);i++) {
+    printf("%d\n", *(p++));
+  }
+}
+
+```
+
+### 指针与二维数组
+``` c++
+#include <stdlib.h>
+#include <stdio.h>
+
+int main() {
+  int a[2][3] = {{1, 2, 3},{ 4, 5, 6}};
+  int (*p)[3] = a;
+
+  for (int i = 0;i < sizeof(a)/sizeof(*a);i++) {
+    for (int j = 0;j < sizeof(*a)/sizeof(**a);j++) {
+      printf("%d ", *(*(p+i)+j));
+    }
+  }
+}
+
+```
+
+``` c++
+#include <stdlib.h>
+#include <stdio.h>
+
+int main() {
+  int a[2][3] = {{1, 2, 3},{ 4, 5, 6}};
+  int *p = &a[0][0];
+
+  for (int i = 0;i < sizeof(a)/sizeof(*a);i++) {
+    for (int j = 0;j < sizeof(*a)/sizeof(**a);j++) {
+      printf("%d ",*(p+(i * sizeof(*a)/sizeof(**a))+j));
+    }
+  }
+}
+
+```
+
+## const与指针
+
+``` c++
+const float pi = 3.14; // 常量化变量
+```
+
+> 先看到指针就是指针 先看到常量就是常量
+
+- 常量指针 指向的内存不能通过这个指针修改
+
+``` c++
+const int* p;
+
+int const *p;
+
+char *strcpy(char *restrict dest, const char *src); // src是源字符串 不应该被修改
+```
+
+- 指针常量 指向的位置不能变 可以通过这个指针修改内存的值
+
+``` c++
+
+int *const p;
+
+const int *const p;
+```
 
 
+## 指针数组与数组指针
+### 指针数组
 
+``` c++
+int *arr[3]
+```
 
+指针数组排序
 
+``` c++
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
+int main() {
+  char *name[5] = {"golang", "java", "c", "dart", "erlang"};
 
+  int k;
+  char *tmp;
+  for (int i = 0;i < (sizeof(name)/sizeof(*name))-1;i++) {
+    k = i;
+    for (int j = i+1;j < (sizeof(name)/sizeof(*name));j++) {
+      if (strcmp(name[k], name[j]) > 0) {
+        k = j;
+      }
+    }
+    if (k != i) {
+      tmp = name[i];
+      name[i] = name[k];
+      name[k] = tmp;
+    }
+  }
 
+  for (int i = 0;i < (sizeof(name)/sizeof(*name));i++) {
+    printf("%s\n", *(name+i));
+  }
+}
 
+```
 
+### 数组指针
 
+``` c++
+int a[2][3] = {{1, 2, 3},{ 4, 5, 6}};
+int (*p)[3] = a;
+```
 
+``` c++
+#include <stdlib.h>
+#include <stdio.h>
 
+int main() {
+  int a[2][3] = {{1, 2, 3},{ 4, 5, 6}};
+  int (*p)[3] = a;
 
+  for (int i = 0;i < sizeof(a)/sizeof(*a);i++) {
+    for (int j = 0;j < sizeof(*a)/sizeof(**a);j++) {
+      printf("%d ", *(*(p+i)+j));
+    }
+  }
+}
 
+```
 
-
-
-
-
+## 多级指针
+没啥好说的
 
 # 函数
 
@@ -752,20 +945,15 @@ int main() {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 # 构造类型
+
+
+
+
+
+
+
+
 
 
 
