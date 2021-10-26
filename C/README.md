@@ -1515,9 +1515,80 @@ int main() {
 - free后最好马上将指针置NULL
 
 # Makefile
+工程管理 依赖管理
+
+- makefile(用户自定义 更高优先级)
+- Makefile(默认)
+
+``` makefile
+mytool:main.o tool1.o tool2.o
+  gcc main.o tool1.o tool2.o -o mytool
+
+main.o:main.c
+  gcc main.c -c -Wall -g -o main.o
+tool1.o:tool1.c
+  gcc tool1.c -c -Wall -g -o tool1.o
+tool2.o:tool2.c
+  gcc tool2.c -c -Wall -g -o tool2.o
+  
+```
 
 
+``` makefile
+OBJS=main.o tool1.o tool2.o
+CC=gcc
 
+mytool:$(OBJS)
+  $(CC) $(OBJS) -o mytool
 
+main.o:main.c
+  $(CC) main.c -c -Wall -g -o main.o
+tool1.o:tool1.c
+  $(CC) tool1.c -c -Wall -g -o tool1.o
+tool2.o:tool2.c
+  $(CC) tool2.c -c -Wall -g -o tool2.o
+ 
+clean:
+  $(RM) $(OBJS) mytool -r
+```
+
+> $^ 表示在上一句依赖关系中被依赖的所有文件
+> $@ 表示在上一句依赖关系中依赖项的目标文件
+
+``` makefile
+CFLAGS=-Wall -g -c
+OBJS=main.o tool1.o tool2.o
+CC=gcc
+
+mytool:$(OBJS)
+  $(CC) $^ -o $@
+
+main.o:main.c
+  $(CC) $^ $(CFLAGS) -o $@
+tool1.o:tool1.c
+  $(CC) $^ $(CFLAGS) -o $@
+tool2.o:tool2.c
+  $(CC) $^ $(CFLAGS) -o $@
+ 
+clean:
+  $(RM) $(OBJS) mytool -r
+```
+
+> % 表示同一个名字
+
+``` makefile
+CFLAGS=-Wall -g -c
+OBJS=main.o tool1.o tool2.o
+CC=gcc
+
+mytool:$(OBJS)
+  $(CC) $^ -o $@
+
+%.o:%.c
+  $(CC) $^ $(CFLAGS) -o $@
+ 
+clean:
+  $(RM) $(OBJS) mytool -r
+```
 
 
