@@ -1328,10 +1328,191 @@ int main() {
 
 ```
 
+## typedef
+
+`typedef type typename`
+
+``` c++
+typedef int INT
+
+int main() {
+  INT i = 9;
+}
+```
+
+> typedef 和 define 的区别
+
+``` c++
+#define IP int *
+type int *IP;
+
+int main() {
+  // 宏
+  IP p, q;
+  int *p, q; // 一个int * 一个int
+  
+  // typedef
+  IP p, q;
+  int *p, *q; // 两个int *
+}
+```
+
+> 数组
+
+``` c++
+typedef int ARR[6]; // int [6] 改名为 ARR
+
+ARR a; // int a[6];
+```
+
+> 结构体
+
+``` c++
+typedef struct {
+  int i;
+  float f;
+}NODE, *NODEP;
+```
+
+> 函数
+
+``` c++
+typedef int *FUNC(int)
+```
+
+> 函数指针
+
+``` c++
+typedef int* (*FUNCP)(int)
+```
+
 # 动态内存管理
+- malloc
+- calloc
+- realloc
+- free
+**谁申请谁释放**
+
+``` c++
+#include <stdlib.h>
+#include <stdio.h>
+
+int main() {
+  int *ip = malloc(sizeof(int));
+
+  *ip = 1;
+
+  printf("%d\n", *ip);
+  free(ip);
+}
+
+```
+
+> 动态数组
+
+``` c++
+#include <stdlib.h>
+#include <stdio.h>
+
+int main() {
+  int *p;
+  int num = 5;
+  p = malloc(num * sizeof(int));
+
+  for (int i = 0;i < num;i++) {
+    scanf("%d", p+i);
+  }
+  for (int i = 0;i < num; i++) {
+    printf("%d ", *(p+i));
+  }
+
+  printf("\n");
+  exit(0);
+}
+
+```
+
+> 内存申请与函数传值
+
+``` c++
+#include <stddef.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+void func1(void *p, size_t size) {
+
+  if(p == NULL) {
+    return;
+  }
+  p = malloc(size);
+}
+
+void func2(int **p, size_t size) {
+
+  if(*p == NULL) {
+    return;
+  }
+  *p = malloc(size);
+}
+
+void *func3(void *p, size_t size) {
+  if(p == NULL) {
+    return NULL;
+  }
+  p = malloc(size);
+  return p;
+}
+
+int main() {
+  int num = 100;
+  int *p = NULL;
+
+  func1(p, num); // 内存会泄露
+
+  func2(&p, num); // 传递二级指针
+
+  p = func3(p, num); // 将申请的内存返回
+
+  free(p);
+  exit(0);
+}
+
+```
 
 
+### free的理解
 
+``` c++
+#include <stddef.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+void func2(int **p, size_t size) {
+
+  if(*p == NULL) {
+    return;
+  }
+  *p = malloc(size);
+}
+
+int main() {
+  int num = 100;
+  int *p = NULL;
+
+  func2(&p, num); // 传递二级指针
+
+  free(p);
+  // p = NULL;
+  
+  *p = 123;
+  printf("%d\n", *p); // 这个指针已经是野指针了 
+  
+  exit(0);
+}
+```
+
+- free代表着变量p不再拥有原来指向内存空间的引用权限
+- free后最好马上将指针置NULL
 
 # Makefile
 
