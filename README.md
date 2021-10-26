@@ -1,8 +1,8 @@
 # LinuxC
-- 目录 OS 是操作系统的学习笔记(更新中)
 - 目录 APUE 是《APUE》的部分学习笔记(完结)
+- 目录 C 是GNU C 的学习笔记(完结)
+- 目录 OS 是操作系统的学习笔记(更新中)
 - 目录 DataStructure 是数据结构 的学习笔记(TODO)
-- 目录 C 是GNU C 的学习笔记(TODO)
 
 
 - 对应课程[https://www.bilibili.com/video/BV18p4y167Md](https://www.bilibili.com/video/BV18p4y167Md)
