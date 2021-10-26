@@ -1123,14 +1123,212 @@ int pthread_create(pthread_t *restrict thread,
 ```
 
 # 构造类型
+## 结构体
+### 产生及意义
+描述复杂的数据类型
+### 类型描述
 
+``` c++
+struct node_st{
+  type1 name1;
+  type2 name2;
+  ...
+};
+```
 
+### 嵌套定义
 
+``` c++
+struct day {
+  int H;
+  int M;
+  int S;
+};
 
+struct student_st{
+  char *name;
+  day day;
+};
+```
 
+### 定义变量 初始化以及成员引用
+- 结构体 .
+- 结构体指针 ->
 
+``` c++
 
+struct A {
+  int i;
+  char c;
+  float f;
+};
 
+int main() {
+  // TYPE NAME = VALUE;
+  struct A a = {123, 'A', 2.22}; // 初始化
+  struct A a_ = { .c = 'A', .f = 2.22}; // 部分初始化
+  struct A *ap = { .c = 'A', .f = 2.22}; // 部分初始化
+  
+  printf("%d %c %.2f\n",a.i, a.c, a.f); // 成员引用
+  // 123 A 2.22
+  printf("%d %c %.2f\n",a_.i, a_.c, a_.f); // 成员引用
+  // 0 A 2.22
+  printf("%d %c %.2f\n",ap->i, ap->c, ap->f); // 成员引用
+  // 0 A 2.22
+}
+```
+
+### 占用内存空间大小
+`addr % sizeof(type)` 不能整除的话就要继续往下偏移
+
+``` c++
+#include <stdio.h>
+#include <stdlib.h>
+
+struct A {
+  int i;
+  char c;
+  float f;
+};
+
+// 可以使用下面的方法取消对齐 常用于网络通信
+struct B {
+  int i;
+  char c;
+  float f;
+}__attribute__((packed));
+
+int main() {
+  struct A a;
+  struct B b;
+
+  printf("A = %ld\n", sizeof(a));
+  printf("B = %ld\n", sizeof(b));
+}
+
+```
+
+## 共用体
+### 产生及意义
+N选一 多个成员共用一块空间 取最大的成员的类型大小作为共用体的类型大小
+### 类型描述
+
+``` c++
+union test_un{
+  int i;
+  float f;
+  double d;
+  char ch;
+};
+```
+
+### 嵌套定义
+同结构体 可以互相嵌套
+
+###  定义变量 初始化以及成员引用
+成员引用：
+- u.成员名
+- up->成员名
+
+> 32位的无符号数的高16位和低16位相加
+
+``` c++
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdint.h>
+
+int main() {
+  uint32_t i = 0x11223344;
+  printf("%x\n", (i>>16)+(i&0xFFFF));
+}
+```
+
+另一种写法
+``` c++
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdint.h>
+
+union {
+  struct {
+    uint16_t i;
+    uint16_t j;
+  }x;
+  uint32_t y;
+}u;
+
+int main() {
+  uint32_t i = 0x11223344;
+  printf("%x\n", (i>>16)+(i&0xFFFF));
+
+  u.y = 0x11223344;
+  printf("%x\n", u.x.i + u.x.j);
+}
+
+```
+
+## 枚举
+
+``` c++
+enum 标识符{
+  成员1;
+  ...
+};
+```
+
+``` c++
+enum dar {
+  MON = 1,
+  TUS,
+  WEB,
+  THR,
+  FRI,
+  SAT,
+  SUN,
+};
+
+int main() {
+  enum day a = FRI;
+  
+  printf("%d\n", a);
+}
+```
+
+``` c++
+enum status {
+  RUNNING = 1,
+  STOP,
+  PAUSE,
+};
+
+struct job {
+  int id;
+  int state;
+  time_t start, end;
+};
+
+int main() {
+  struct job_st job1;
+  
+  switch(jobs.state) {
+    case RUNNING:
+      // TODO
+      break;
+    case STOP:
+      // TODO
+      break;
+    case PAUSE:
+      // TODO
+      break;
+    default:
+      // TODO
+      abort();
+  }
+}
+
+```
+
+# 动态内存管理
 
 
 
