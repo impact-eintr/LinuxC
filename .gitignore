@@ -9,9 +9,11 @@
 *.exe~
 *.dll
 *.so
+*.o
 *.dylib
-webconsole
-sxjk
+
+IPv4_Media/server/server
+IPv4_Media/client/client
 
 # Test binary, built with `go test -c`
 *.test
