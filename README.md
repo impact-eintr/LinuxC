@@ -1,10 +1,10 @@
 # LinuxC
 - 目录 APUE 是《APUE》的部分学习笔记(完结)
 - 目录 C 是GNU C 的学习笔记(完结)
-- 目录 OS 是操作系统的学习笔记(更新中)
-- 目录 DataStructure 是数据结构 的学习笔记(TODO)
-- 目录 C++ 面向对象编程系列来自侯捷大师的CPP面向对象编程系列
-
+- 目录 OS 是操作系统的学习笔记(暂停)
+- 目录 DataStructure 是数据结构 的学习笔记(停更)
+- 目录 C++ 面向对象编程系列来自侯捷大师的CPP面向对象编程系列(完结)
+- 目录 CSIAPP 深入理解计算机系统 来自微软大佬`yangmingz`的公开课[https://www.bilibili.com/video/BV17K4y1N7Q2](https://www.bilibili.com/video/BV17K4y1N7Q2)(更新中)
 - 对应课程[https://www.bilibili.com/video/BV18p4y167Md](https://www.bilibili.com/video/BV18p4y167Md)
 - 操作系统对应课程[操作系统实战45讲](https://time.geekbang.org/column/intro/100078401?tab=catalog)
 
@@ -13,6 +13,9 @@
 **不要上传二进制文件！**
 
 ## ERRNO
+
+### EINTR
+`EINTR`这个昵称就是来自ERRNO 一个烦人的小东西 但也正是从接LinuxC开始，我逐渐成长为一位编程者，感谢李慧芹老师以及来自`c/c++`领域的各位大佬的知识和经验分享。
 
 |number|  hex | symbol | description|
 |:----:|:----:|:------:|:----------:|

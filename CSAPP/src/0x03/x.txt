@@ -1,0 +1,43 @@
+
+main：     文件格式 elf64-x86-64
+
+// 以下是重点
+
+0000000000001119 <add>:
+    1119:	55                   	push   %rbp
+    111a:	48 89 e5             	mov    %rsp,%rbp
+    111d:	48 89 7d e8          	mov    %rdi,-0x18(%rbp)
+    1121:	48 89 75 e0          	mov    %rsi,-0x20(%rbp)
+    1125:	48 8b 55 e8          	mov    -0x18(%rbp),%rdx
+    1129:	48 8b 45 e0          	mov    -0x20(%rbp),%rax
+    112d:	48 01 d0             	add    %rdx,%rax
+    1130:	48 89 45 f8          	mov    %rax,-0x8(%rbp)
+    1134:	48 8b 45 f8          	mov    -0x8(%rbp),%rax
+    1138:	5d                   	pop    %rbp
+    1139:	c3                   	ret    
+
+000000000000113a <main>:
+    113a:	55                   	push   %rbp
+    113b:	48 89 e5             	mov    %rsp,%rbp
+    113e:	48 83 ec 20          	sub    $0x20,%rsp
+    1142:	48 c7 45 e8 34 12 00 	movq   $0x1234,-0x18(%rbp)
+    1149:	00 
+    114a:	b8 00 00 cd ab       	mov    $0xabcd0000,%eax
+    114f:	48 89 45 f0          	mov    %rax,-0x10(%rbp)
+    1153:	48 8b 55 f0          	mov    -0x10(%rbp),%rdx
+    1157:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+    115b:	48 89 d6             	mov    %rdx,%rsi
+    115e:	48 89 c7             	mov    %rax,%rdi
+    1161:	e8 b3 ff ff ff       	call   1119 <add>
+    1166:	48 89 45 f8          	mov    %rax,-0x8(%rbp)
+    116a:	b8 00 00 00 00       	mov    $0x0,%eax
+    116f:	c9                   	leave  
+    1170:	c3                   	ret    
+
+Disassembly of section .fini:
+
+0000000000001174 <_fini>:
+    1174:	f3 0f 1e fa          	endbr64 
+    1178:	48 83 ec 08          	sub    $0x8,%rsp
+    117c:	48 83 c4 08          	add    $0x8,%rsp
+    1180:	c3                   	ret    
