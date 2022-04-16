@@ -29,6 +29,10 @@ static trie_node_t *operator_mapping = NULL;
 
 static void lazy_initialize_trie() {
   // initialize the register mapping
+  // NOTE 这里需要注意一个东西 我们的虚拟机将物理机的部分内存作为 cpu寄存器组和pmm
+  // pmm是一个byteslice
+  // reggroup则是一些变量(结构体)的成员地址
+  // 相当于将这些地址独立模拟成虚拟及内存之外的可保存数据的区域
   if (register_mapping == NULL) {
     register_mapping = trie_construct();
     register_mapping =
