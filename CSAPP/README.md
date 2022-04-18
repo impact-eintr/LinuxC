@@ -302,10 +302,292 @@ typedef struct CPU_STRUCT {
 ## 0xE
 
 ## 0xF
+E(Executable)L(Linkable)F(Format) 可执行可链接的格式
 
-## 0x10
+1. 定位目标函数
+2. 符号解析
+3. 重定位
+## 0x10 符号表
 
-## 0x11
+``` c++
+data1
+07 00 00 00              -st_name = "data1"
+11                       - st_info
+00                       - st_other
+02 00                    - st_section = .data
+00 00 00 00 00 00 00 00  - st_value
+08 00 00 00 00 00 00 00  - st_size
+
+data2
+0d 00 00 00              -st_name = "data2"
+11                       - st_info
+00                       - st_other
+02 00                    - st_section = .data
+08 00 00 00 00 00 00 00  - st_value
+08 00 00 00 00 00 00 00  - st_size
+
+func1
+13 00 00 00              -st_name = "func1"
+12                       - st_info
+00                       - st_other
+01 00                    - st_section = .text
+00 00 00 00 00 00 00 00  - st_value
+07 00 00 00 00 00 00 00  - st_size
+
+func2
+19 00 00 00              -st_name = "func2"
+12                       - st_info
+00                       - st_other
+01 00                    - st_section = .text
+07 00 00 00 00 00 00 00  - st_value
+07 00 00 00 00 00 00 00  - st_size
+```
+
+``` c++
+Start:
+Elf64_Shdr[Elf64_Sym.st_section].sh_offset + Elf64_Sym.st_value
+
+End:
+Start + Elf64_Sym.size - 1
+
+ELF[Start, End) - Symbol
+```
+
+``` c++
+src1.c                 src2.c                 src3.c
+  ||                     ||                     ||
+  \/    /---Type-----\   \/   /------Type----\  \/
+external              external                external ==> linker负责的部分 全局变量 函数
+  ||    \---Bind-----/   ||   \-----Bind-----/  ||
+  \/                     \/                     \/
+internal              internal                internal     局部作用域 分配在stack和heap上 linker不负责这些
+
+```
+
+## 0x11 Bind | Type
+`st_info` 是一个`unsigned char(uint8_t)`
+
+``` c++
+
+B i n d  T y p e
+_ _ _ _  _ _ _ _
+1 2 3 4  5 6 7 8
+
+bind = (st_info >> 4) & 0x0f
+type = st_info & 0x0f
+st_info = ((bind << 4) & 0xf0) + (type & 0xf)
+```
+
+常用的取值
+
+| st_bind | value | st_type | value |
+|:-------:|:-----:|:-------:|:-----:|
+| LOCAL   | 0000  | NOTYPE  | 0000  |
+| GLOBAL  | 0001  | OBJECT  | 0001  |
+| WEAK    | 0010  | FUNC    | 0010  |
+
+
+``` c++
+
+#define STB_LOCAL 0   /* Local symbol */
+#define STB_GLOBAL  1   /* Global symbol */
+#define STB_WEAK  2   /* Weak symbol */
+#define STB_NUM   3   /* Number of defined types.  */
+#define STB_LOOS  10    /* Start of OS-specific */
+#define STB_GNU_UNIQUE  10    /* Unique symbol.  */
+#define STB_HIOS  12    /* End of OS-specific */
+#define STB_LOPROC  13    /* Start of processor-specific */
+#define STB_HIPROC  15    /* End of processor-specific */
+
+/* Legal values for ST_TYPE subfield of st_info (symbol type).  */
+
+#define STT_NOTYPE  0   /* Symbol type is unspecified */
+#define STT_OBJECT  1   /* Symbol is a data object */
+#define STT_FUNC  2   /* Symbol is a code object */
+#define STT_SECTION 3   /* Symbol associated with a section */
+#define STT_FILE  4   /* Symbol's name is file name */
+#define STT_COMMON  5   /* Symbol is a common data object */
+#define STT_TLS   6   /* Symbol is thread-local data object*/
+#define STT_NUM   7   /* Number of defined types.  */
+#define STT_LOOS  10    /* Start of OS-specific */
+#define STT_GNU_IFUNC 10    /* Symbol is indirect code object */
+#define STT_HIOS  12    /* End of OS-specific */
+#define STT_LOPROC  13    /* Start of processor-specific */
+#define STT_HIPROC  15    /* End of processor-specific */
+
+```
+
+
+### 有关STB_WEAK
+**声明为弱符号，防止我们的程序使用外部函数的时候，未定义，直接崩溃**
+
+``` c++
+// src1.c
+__attribute__((weak)) int func() {
+  return -1;
+}
+
+int main() {
+  if (func() == -1) {
+    printf("func not found!\n");
+    exit(1);
+  } else if (func() == 2) {
+    printf("func found!\n");
+  }
+}
+
+// src2.c
+int func() {
+  // do sth.
+  return 2;
+}
+```
+
+
+**Bind 表明了可见程度**
+
+> COMMOM symbal
+
+``` c++
+/* Special section indices.  */
+
+#define SHN_UNDEF 0   /* Undefined section */
+#define SHN_LORESERVE 0xff00    /* Start of reserved indices */
+#define SHN_LOPROC  0xff00    /* Start of processor-specific */
+#define SHN_BEFORE  0xff00    /* Order section before all others
+             (Solaris).  */
+#define SHN_AFTER 0xff01    /* Order section after all others
+             (Solaris).  */
+#define SHN_HIPROC  0xff1f    /* End of processor-specific */
+#define SHN_LOOS  0xff20    /* Start of OS-specific */
+#define SHN_HIOS  0xff3f    /* End of OS-specific */
+#define SHN_ABS   0xfff1    /* Associated symbol is absolute */
+#define SHN_COMMON  0xfff2    /* Associated symbol is common */
+#define SHN_XINDEX  0xffff    /* Index is in extra table.  */
+#define SHN_HIRESERVE 0xffff    /* End of reserved indices */
+
+```
+
+### Type
+> function
+
+``` c++
+
+// function (bind, type, section index)
+extern void f1(); // global, notype, undefined
+extern void f2() {} // flobal, func, .text
+
+void f3(); // global, notype, undefined
+void f4() {} // global, func, .text
+
+__attribute__((weak)) extern void f5(); // weak, notype, undefined
+__attribute__((weak)) extern void f6() {} // weak, func, .text
+
+
+__attribute__((weak)) void f7(); // weak, notype, undefined
+__attribute__((weak)) void f8() {} // weak, func, .text
+
+static void f9(); // waring: 'f9' used bu never define # global, notype, undefined
+static void fa() {} // local, func, .text
+
+void g() {
+  f1();
+  f2();
+  f3();
+  f4();
+  f5();
+  f6();
+  f7();
+  f8();
+  f9();
+  fa();
+}
+
+```
+
+``` c++
+gcc -c symbol.c -o symbol.o
+
+readelf -s symbol.o
+
+Symbol table '.symtab' contains 12 entries:
+   Num:    Value          Size Type    Bind   Vis      Ndx Name
+     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND
+     1: 0000000000000000     0 FILE    LOCAL  DEFAULT  ABS symbol.c
+     2: 0000000000000000     0 SECTION LOCAL  DEFAULT    1 .text
+     3: 0000000000000000     7 FUNC    GLOBAL DEFAULT    1 f2
+     4: 0000000000000007     7 FUNC    GLOBAL DEFAULT    1 f4
+     5: 000000000000000e     7 FUNC    WEAK   DEFAULT    1 f6
+     6: 0000000000000015     7 FUNC    WEAK   DEFAULT    1 f8
+     7: 000000000000001c    87 FUNC    GLOBAL DEFAULT    1 g
+     8: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT  UND f1
+     9: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT  UND f3
+    10: 0000000000000000     0 NOTYPE  WEAK   DEFAULT  UND f5
+    11: 0000000000000000     0 NOTYPE  WEAK   DEFAULT  UND f7
+```
+
+> object
+
+``` c++
+
+```// object
+extern int d1; // global, notype, undefined
+extern int d2 = 0; // 警告：‘d2’已初始化，却又被声明为‘extern’ # global, object, .bss
+extern int d3 = 1; // 警告：‘d3’已初始化，却又被声明为‘extern’ # global, object, .data
+
+static int d4; // local, object, .bss
+static int d5 = 0; // local, object, .bss
+static int d6 = 1; // local, object, .data
+
+int d7; // local, object, COMMON
+int d8 = 0; // local, object, .bss
+int d9 = 1; // local, object, .data
+
+__attribute__((weak)) int da; // weak, object, .bss
+__attribute__((weak)) int db = 0; // weak, object, .bss
+__attribute__((weak)) int dc = 1; // weak, object, .data
+
+void object() {
+  d1 = 2;
+  d2 = 2;
+  d3 = 2;
+  d4 = 2;
+  d5 = 2;
+  d6 = 2;
+  d7 = 2;
+  d8 = 2;
+  d9 = 2;
+  da = 2;
+  db = 2;
+  dc = 2;
+}
+
+
+``` c++
+
+readelf -s symbol.o
+
+Symbol table '.symtab' contains 18 entries:
+   Num:    Value          Size Type    Bind   Vis      Ndx Name
+     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND
+     1: 0000000000000000     0 FILE    LOCAL  DEFAULT  ABS symbol.c
+     2: 0000000000000000     0 SECTION LOCAL  DEFAULT    1 .text
+     3: 0000000000000000     0 SECTION LOCAL  DEFAULT    3 .data
+     4: 0000000000000000     0 SECTION LOCAL  DEFAULT    4 .bss
+     5: 0000000000000014     4 OBJECT  LOCAL  DEFAULT    4 d4
+     6: 0000000000000018     4 OBJECT  LOCAL  DEFAULT    4 d5
+     7: 0000000000000004     4 OBJECT  LOCAL  DEFAULT    3 d6
+     8: 0000000000000000     4 OBJECT  GLOBAL DEFAULT    4 d2
+     9: 0000000000000000     4 OBJECT  GLOBAL DEFAULT    3 d3
+    10: 0000000000000004     4 OBJECT  GLOBAL DEFAULT    4 d7
+    11: 0000000000000008     4 OBJECT  GLOBAL DEFAULT    4 d8
+    12: 0000000000000008     4 OBJECT  GLOBAL DEFAULT    3 d9
+    13: 000000000000000c     4 OBJECT  WEAK   DEFAULT    4 da
+    14: 0000000000000010     4 OBJECT  WEAK   DEFAULT    4 db
+    15: 000000000000000c     4 OBJECT  WEAK   DEFAULT    3 dc
+    16: 0000000000000000   127 FUNC    GLOBAL DEFAULT    1 object
+    17: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT  UND d1
+```
 
 ## 0x12
 
