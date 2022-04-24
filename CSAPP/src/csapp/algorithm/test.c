@@ -90,6 +90,18 @@ int main() {
 
   //trie_print(tn);
   //trie_free(tn);
-  lazy_initialize_trie();
-  trie_print(operator_mapping);
+  //lazy_initialize_trie();
+  //trie_print(operator_mapping);
+
+  linkedlist_t *list = linkedlist_construct();
+  for (int i = 0;i < TIMES; ++i) {
+    linkedlist_add(list, i);
+  }
+
+  for (int i = 300;i < TIMES/2; ++i) {
+    linkedlist_node_t *head = linkedlist_index(list, i);
+    linkedlist_delete(list, head);
+  }
+
+  linkedlist_free(list);
 }
