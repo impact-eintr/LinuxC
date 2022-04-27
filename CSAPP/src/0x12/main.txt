@@ -1,0 +1,98 @@
+
+main.o：     文件格式 elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000000000 <main>:
+   0:	55                   	push   %rbp
+   1:	48 89 e5             	mov    %rsp,%rbp
+   4:	48 83 ec 10          	sub    $0x10,%rsp
+   8:	be 02 00 00 00       	mov    $0x2,%esi
+   d:	48 8d 05 00 00 00 00 	lea    0x0(%rip),%rax        # 14 <main+0x14>
+  14:	48 89 c7             	mov    %rax,%rdi
+  17:	e8 00 00 00 00       	call   1c <main+0x1c>
+  1c:	48 89 45 f8          	mov    %rax,-0x8(%rbp)
+  20:	b8 00 00 00 00       	mov    $0x0,%eax
+  25:	c9                   	leave  
+  26:	c3                   	ret    
+
+Disassembly of section .data:
+
+0000000000000000 <array>:
+   0:	00 00                	add    %al,(%rax)
+   2:	34 12                	xor    $0x12,%al
+   4:	00 00                	add    %al,(%rax)
+   6:	00 00                	add    %al,(%rax)
+   8:	cd ab                	int    $0xab
+   a:	00 00                	add    %al,(%rax)
+   c:	00 00                	add    %al,(%rax)
+	...
+
+0000000000000010 <bias>:
+  10:	00 00                	add    %al,(%rax)
+  12:	00 f0                	add    %dh,%al
+  14:	00 00                	add    %al,(%rax)
+	...
+
+Disassembly of section .comment:
+
+0000000000000000 <.comment>:
+   0:	00 47 43             	add    %al,0x43(%rdi)
+   3:	43 3a 20             	rex.XB cmp (%r8),%spl
+   6:	28 47 4e             	sub    %al,0x4e(%rdi)
+   9:	55                   	push   %rbp
+   a:	29 20                	sub    %esp,(%rax)
+   c:	31 31                	xor    %esi,(%rcx)
+   e:	2e 32 2e             	cs xor (%rsi),%ch
+  11:	30 00                	xor    %al,(%rax)
+
+Disassembly of section .note.gnu.property:
+
+0000000000000000 <.note.gnu.property>:
+   0:	04 00                	add    $0x0,%al
+   2:	00 00                	add    %al,(%rax)
+   4:	20 00                	and    %al,(%rax)
+   6:	00 00                	add    %al,(%rax)
+   8:	05 00 00 00 47       	add    $0x47000000,%eax
+   d:	4e 55                	rex.WRX push %rbp
+   f:	00 02                	add    %al,(%rdx)
+  11:	00 01                	add    %al,(%rcx)
+  13:	c0 04 00 00          	rolb   $0x0,(%rax,%rax,1)
+	...
+  1f:	00 01                	add    %al,(%rcx)
+  21:	00 01                	add    %al,(%rcx)
+  23:	c0 04 00 00          	rolb   $0x0,(%rax,%rax,1)
+  27:	00 01                	add    %al,(%rcx)
+  29:	00 00                	add    %al,(%rax)
+  2b:	00 00                	add    %al,(%rax)
+  2d:	00 00                	add    %al,(%rax)
+	...
+
+Disassembly of section .eh_frame:
+
+0000000000000000 <.eh_frame>:
+   0:	14 00                	adc    $0x0,%al
+   2:	00 00                	add    %al,(%rax)
+   4:	00 00                	add    %al,(%rax)
+   6:	00 00                	add    %al,(%rax)
+   8:	01 7a 52             	add    %edi,0x52(%rdx)
+   b:	00 01                	add    %al,(%rcx)
+   d:	78 10                	js     1f <.eh_frame+0x1f>
+   f:	01 1b                	add    %ebx,(%rbx)
+  11:	0c 07                	or     $0x7,%al
+  13:	08 90 01 00 00 1c    	or     %dl,0x1c000001(%rax)
+  19:	00 00                	add    %al,(%rax)
+  1b:	00 1c 00             	add    %bl,(%rax,%rax,1)
+  1e:	00 00                	add    %al,(%rax)
+  20:	00 00                	add    %al,(%rax)
+  22:	00 00                	add    %al,(%rax)
+  24:	27                   	(bad)  
+  25:	00 00                	add    %al,(%rax)
+  27:	00 00                	add    %al,(%rax)
+  29:	41 0e                	rex.B (bad) 
+  2b:	10 86 02 43 0d 06    	adc    %al,0x60d4302(%rsi)
+  31:	62                   	(bad)  
+  32:	0c 07                	or     $0x7,%al
+  34:	08 00                	or     %al,(%rax)
+	...
