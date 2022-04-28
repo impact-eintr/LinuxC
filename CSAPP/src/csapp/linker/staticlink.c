@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "../headers/common.h"
+#include "../headers/instruction.h"
 #include "../headers/linker.h"
 
 #define MAX_SYMBOL_MAP_LENGTH (64)
@@ -12,9 +13,9 @@
 #define MAX_RELOCATION_LINES (64)
 
 typedef struct {
-  elf_t *elf; // src elf files
-  st_entry_t *src; // src symbols
-  st_entry_t *dst; // dst symbols
+  elf_t *elf; // src elf files: main.c sum.o ...
+  st_entry_t *src; // src symbols: unique strong_symbol table
+  st_entry_t *dst; // dst symbols: destination file symbol table after recaculated offset
 } smap_t; // symbol map type
 
 /* ------------------------------------ */
@@ -84,7 +85,7 @@ void link_elf(elf_t **srcs, int num_srcs, elf_t *dst) {
   compute_section_header(dst, smap_table, &smap_count);
 
   // malloc the dst.symt
-  dst->symt_count = smap_count;
+  dst->symt_count = smap_count; // 4 : array bias sum main
   dst->symt = malloc(dst->symt_count * sizeof(st_entry_t));
 
   // to this point, the EOF file header and section header table is placed
@@ -102,11 +103,11 @@ void link_elf(elf_t **srcs, int num_srcs, elf_t *dst) {
 #endif
 
   // relocating: update the relocation entries from ELF files into EOF buffer
-  //relocation_processing(srcs, num_srcs, dst, smap_table, &smap_count);
+  relocation_processing(srcs, num_srcs, dst, smap_table, &smap_count);
 
 #ifdef DEBUG_LINK
   // finally, check EOF file
-  printf("----\nfinal output EOF:\n");
+  printf("-----------------------\nfinal output EOF:\n");
   for (int i = 0; i < dst->line_count; ++i) {
     printf("%s\n", dst->buffer[i]);
   }
@@ -384,7 +385,9 @@ static void merge_section(elf_t **srcs, int num_srcs, elf_t *dst,
 #ifdef DEBUG_LINK
                 printf("\t\tsymbol '%s'\n", sym->st_name);
 #endif
+                // NOTE: we will filling the "dst" and smap_table[k]
                 for (int t = 0; t < sym->st_size; ++t) {
+                  // copy section to segment
                   int dst_index = line_written + t;
                   int src_index = srcs[i]->sht[src_section_index].sh_offset + sym->st_value + t;
                   assert(dst_index < MAX_ELF_FILE_LENGTH);
@@ -399,13 +402,12 @@ static void merge_section(elf_t **srcs, int num_srcs, elf_t *dst,
                 dst->symt[symt_written].bind = sym->bind;
                 dst->symt[symt_written].type = sym->type;
                 strcpy(dst->symt[symt_written].st_shndx, sym->st_shndx);
-                // MUST NOT BE A COMMON, so the section offset MUST NOT BE
-                // alignment
+                // NOTE: recalculate offset: sym->st_value to sy_section_offset
                 dst->symt[symt_written].st_value = sym_section_offset;
                 dst->symt[symt_written].st_size = sym->st_size;
 
                 // update the smap_table
-                // this will hep the relocation
+                // this will help the relocation
                 smap_table[k].dst = &dst->symt[symt_written];
 
                 // udpate the counter
@@ -433,23 +435,180 @@ static void merge_section(elf_t **srcs, int num_srcs, elf_t *dst,
 
 // precondition: smap_table.dst is valid
 static void relocation_processing(elf_t **srcs, int num_srcs, elf_t *dst,
-                                  smap_t *smap_table, int *smap_count) {}
+                                  smap_t *smap_table, int *smap_count) {
+  sh_entry_t *eof_text_sh = NULL;
+  sh_entry_t *eof_data_sh = NULL;
+  for (int i = 0;i < dst->sht_count;++i) {
+    if (strcmp(dst->sht[i].sh_name, ".text") == 0) {
+      eof_text_sh = &(dst->sht[i]);
+    } else if (strcmp(dst->sht[i].sh_name, ".data") == 0) {
+      eof_data_sh = &(dst->sht[i]);
+    }
+  }
+
+  // update the relocation entries:r_row, r_col, sym
+  for (int i = 0;i < num_srcs;++i) {
+    elf_t *elf = srcs[i];
+    // .rel.text
+    for (int j = 0;j < elf->reltext_count;++j) {
+      rl_entry_t *r = &elf->reltext[j];
+
+      // search the referencing symbol
+      for (int k = 0;k < elf->symt_count;++k) {
+        st_entry_t *sym = &elf->symt[k];
+        //printf("test 文件中的reltext section 定位 symtab %s\n", sym->st_name);
+
+        if (strcmp(sym->st_shndx, ".text") == 0) {
+          int sym_text_start = sym->st_value;
+          int sym_text_end = sym_text_start + sym->st_size - 1;
+          //printf("遍历文件中的reltext section 发现symtab中的%s 的所属section 为.text\n", sym->st_name);
+          if (sym_text_start <= r->r_row && r->r_row <= sym_text_end) {
+            // [sym_text_start, sym_text_end]
+            //printf(
+            //    "遍历文件的reltext 当前重定位目标是 %s 发现其symtab中%s->sh_shndx 为.text\
+ 区间吻合 则//%s位于%s的第[%ld]行\n",
+            //    elf->symt[r->sym].st_name, sym->st_name,
+            //    elf->symt[r->sym].st_name, sym->st_name,
+            //    r->r_row);
+            int smap_found = 0;
+            // next,start modifying the segment that needs to be relocation
+            for (int t = 0; t < *smap_count; ++t) {
+              if (smap_table[t].src == sym) {
+                smap_found = 1;
+                st_entry_t *eof_referencing = smap_table[t].dst; // smap_table[t].dst is the point to segment conten
+                // search the being referenced symbol, UPDATE THE SEGMENT
+                for (int u = 0;u < *smap_count;++u) {
+                  if (strcmp(elf->symt[r->sym].st_name, smap_table[u].dst->st_name) == 0 &&
+                    smap_table[u].dst->bind == STB_GLOBAL) {
+                    st_entry_t *eof_referenced = smap_table[u].dst;
+                    (handler_table[(int)r->type])(dst, eof_text_sh,
+                      r->r_row - sym->st_value + eof_referencing->st_value,
+                      r->r_col, r->r_addend, eof_referenced);
+                    goto NEXT_REFERENCE_IN_TEXT;
+                  }
+                }
+              }
+            }
+            assert(smap_found == 1);
+          }
+        }
+      }
+NEXT_REFERENCE_IN_TEXT:
+      ;
+    }
+    // .rel.data
+    for (int j = 0;j < elf->reldata_count;j++) {
+      rl_entry_t *r = &elf->reldata[j];
+
+      // search the referencing symbol
+      for (int k = 0;k < elf->symt_count;++k) {
+        st_entry_t *sym = &elf->symt[k];
+        //printf("test 文件中的reldata section 定位 symtab %s\n", sym->st_name);
+
+        if (strcmp(sym->st_shndx, ".data") == 0) {
+          int sym_data_start = sym->st_value;
+          int sym_data_end = sym_data_start + sym->st_size - 1;
+          //printf("遍历文件中的reldata section 发现symtab中的%s 的所属section 为.data\n", sym->st_name);
+          if (sym_data_start <= r->r_row && r->r_row <= sym_data_end) {
+            // [sym_data_start, sym_data_end]
+            //printf(
+            //    "遍历文件的reldata 当前重定位目标是 %s 发现其symtab中%s->sh_shndx 为.data\
+ 区间吻合 则//%s位于%s的第[%ld]行\n",
+            //    elf->symt[r->sym].st_name, sym->st_name,
+            //    elf->symt[r->sym].st_name, sym->st_name,
+            //    r->r_row);
+            int smap_found = 0;
+            // next,start modifying the segment that needs to be relocation
+            for (int t = 0; t < *smap_count; ++t) {
+              if (smap_table[t].src == sym) {
+                smap_found = 1;
+                st_entry_t *eof_referencing = smap_table[t].dst; // smap_table[t].dst is the point to segment conten
+                // search the being referenced symbol, UPDATE THE SEGMENT
+                for (int u = 0;u < *smap_count;++u) {
+                  if (strcmp(elf->symt[r->sym].st_name, smap_table[u].dst->st_name) == 0 &&
+                    smap_table[u].dst->bind == STB_GLOBAL) {
+                    st_entry_t *eof_referenced = smap_table[u].dst;
+                    (handler_table[(int)r->type])(dst, eof_data_sh,
+                      r->r_row - sym->st_value + eof_referencing->st_value,
+                      r->r_col, r->r_addend, eof_referenced);
+                    goto NEXT_REFERENCE_IN_DATA;
+                  }
+                }
+              }
+            }
+            assert(smap_found == 1);
+          }
+        }
+      }
+NEXT_REFERENCE_IN_DATA:
+      ;
+    }
+  }
+}
 
 // relocating handlers
 
 static uint64_t get_symbol_runtime_address(elf_t *dst, st_entry_t *sym) {
-  return 0;
+  // get the tun-time address of symbol
+  uint64_t base = 0x00400000;
+
+  uint64_t text_base = base;
+  uint64_t rodata_base = base;
+  uint64_t data_base = base;
+
+  int inst_size = sizeof(inst_t);
+  int data_size = sizeof(uint64_t);
+
+  sh_entry_t *sht = dst->sht;
+  for (int i = 0;i < dst->sht_count;++i) {
+    if (strcmp(sht[i].sh_name, ".text") == 0) {
+      rodata_base = text_base + sht[i].sh_size * inst_size;
+      data_base = rodata_base;
+    } else if (strcmp(sht[i].sh_name, ".rodata") == 0) {
+      data_base = rodata_base + sht[i].sh_size * inst_size;
+    }
+  }
+  // check this symbol's section
+  if (strcmp(sym->st_shndx, ".text") == 0) {
+    return text_base + inst_size * sym->st_value;
+  } else if (strcmp(sym->st_shndx, ".rodata") == 0) {
+    return rodata_base + data_size * sym->st_value;
+  } else if (strcmp(sym->st_shndx, ".data") == 0) {
+    return data_base + data_size * sym->st_value;
+  }
+
+  return 0xFFFFFFFFFFFFFFFF;
 }
 
-static void write_relocation(char *dst, uint64_t val) {}
+static void write_relocation(char *dst, uint64_t val) {
+  char temp[20];
+  sprintf(temp, "0x%016lx", val);
+  for (int i = 0; i < 18; ++i) {
+    dst[i] = temp[i];
+  }
+}
 
 static void R_X86_64_32_handler(elf_t *dst, sh_entry_t *sh, int row_referencing,
                                 int col_referencing, int addend,
-                                st_entry_t *sym_referenced) {}
+                                st_entry_t *sym_referenced) {
+  uint64_t sym_address = get_symbol_runtime_address(dst, sym_referenced);
+  // rewrite the relocated address
+  char *s = &dst->buffer[sh->sh_offset + row_referencing][col_referencing];
+  write_relocation(s, sym_address);
+}
 
 static void R_X86_64_PC32_handler(elf_t *dst, sh_entry_t *sh,
                                   int row_referencing, int col_referencing,
-                                  int addend, st_entry_t *sym_referenced) {}
+                                  int addend, st_entry_t *sym_referenced) {
+  assert(strcmp(sh->sh_name, ".text") == 0);
+
+  uint64_t sym_address = get_symbol_runtime_address(dst, sym_referenced);
+  printf("[%s] run-time address: %lx\n",sym_referenced->st_name  ,sym_address);
+  uint64_t rip_value = 0x00400000 + (row_referencing + 1) * sizeof(inst_t);
+  // rewrite the relocated address
+  char *s = &dst->buffer[sh->sh_offset + row_referencing][col_referencing];
+  write_relocation(s, sym_address - rip_value);
+}
 
 static const char *get_stb_string(st_bind_t bind) {
   switch (bind) {

@@ -1,0 +1,53 @@
+//// global, notype, undefined
+//unsigned long long sum(unsigned long long *a, unsigned long long n);
+//// global, object, .data
+//unsigned long long array[2] = {0x12340000, 0xabcd};
+//// global, object, .data
+//unsigned long long bias = 0xf0000000;
+//
+//// global, function, .text
+//int main() {
+//  unsigned long long val = sum(array, 2);
+//}
+
+// effective lines
+25
+
+// lines of SHT
+4
+
+// SHT
+.text,0x0,6,10
+.data,0x0,16,3
+.symtab,0x0,19,4
+.rel.text,0x0,23,2
+
+// .text
+// main()
+push   %rbp
+mov    %rsp,%rbp
+sub    $0x10,%rsp
+mov    $0x2,%esi
+lea    0x0000000000000000(%rip),%rdi // 0x0(%rip),%rax
+call   0x0000000000000000            // 1c <main+0x1c> place holder for sum
+mov    %rax,-0x8(%rbp)
+mov    $0x0,%eax
+leave
+ret
+
+// .data
+0x0000000012340000  // array[0]
+0x000000000000abcd  // array[1]
+0x0000000f00000000  // bias
+
+// .symtab
+// st_name,bind,type,st_shndex,st_value,st_size
+array,STB_GLOBAL,STT_OBJECT,.data,0,2
+bias,STB_GLOBAL,STT_OBJECT,.data,2,1
+main,STB_GLOBAL,STT_FUNC,.text,0,11
+sum,STB_GLOBAL,STT_NOTYPE,SHN_UNDEF,0,0
+
+// .rel.text
+// r_row,r_col,type,sym,r_addend
+4,7,R_X86_64_PC32,0,-4  // array, we don't know array's run-time addr
+5,7,R_X86_64_PLT32,3,-4 // sum

@@ -20,7 +20,7 @@ static void print_symtab_entry(st_entry_t *ste) {
 }
 
 static void print_relocation_entry(rl_entry_t *rte) {
-  //printf("%lu\t%lu\t%d\t%u\t%ld\n", rte->r_row, rte->r_col, rte->type, rte->sym, rte->r_addend);
+  printf("%lu\t%lu\t%d\t%u\t%ld\n", rte->r_row, rte->r_col, rte->type, rte->sym, rte->r_addend);
 }
 
 #endif
@@ -129,7 +129,22 @@ static void parse_relocation(char *str, rl_entry_t *rte) {
   char **cols;
   int num_cols = parse_table_entry(str, &cols);
   assert(num_cols == 5);
-  // TODO
+
+  assert(rte != NULL);
+  rte->r_row = string2uint(cols[0]);
+  rte->r_col = string2uint(cols[1]);
+
+  // select relocation type
+  uint64_t type_value;
+  if (hashtable_get(link_constant_dict, cols[2], &type_value) == 0) {
+    printf("relocation type is neiter R_X86_64_32, R_X86_64_PC32, nor R_X86_64");
+    exit(0);
+  }
+
+  rte->type = (reltype)type_value;
+  rte->sym = string2uint(cols[3]);
+  uint64_t bitmap = string2uint(cols[4]);
+  rte->r_addend = *(int64_t *)&bitmap;
 
   // free memory allocated
   for (int i = 0;i < num_cols;++i) {
@@ -267,14 +282,35 @@ void parse_elf(char *filename, elf_t *elf) {
   // parse relocation table
   // .rel.text
   if (rtext_sh != NULL) {
-    // TODO
+    elf->reltext_count = rtext_sh->sh_size;
+    elf->reltext = malloc(elf->reltext_count * sizeof(rl_entry_t));
+    memset(elf->reltext, 0, elf->reltext_count * sizeof(rl_entry_t));
+    for (int i = 0;i < rtext_sh->sh_size;++i) {
+      parse_relocation(elf->buffer[i+rtext_sh->sh_offset], &(elf->reltext[i]));
+      int st = elf->reltext[i].sym;
+      assert(0 <= st && st < elf->symt_count);
+#ifdef DEBUG_LINK
+      print_relocation_entry(&(elf->reltext[i]));
+#endif
+    }
   } else {
     elf->reltext_count = 0;
     elf->reltext = NULL;
   }
   // .rel.data
   if (rdata_sh != NULL) {
-    // TODO
+    elf->reldata_count = rdata_sh->sh_size;
+    elf->reldata = malloc(elf->reldata_count * sizeof(rl_entry_t));
+    memset(elf->reldata, 0, elf->reldata_count * sizeof(rl_entry_t));
+
+    for (int i = 0; i < rdata_sh->sh_size; ++i) {
+      parse_relocation(elf->buffer[i + rdata_sh->sh_offset], &(elf->reldata[i]));
+      int st = elf->reldata[i].sym;
+      assert(0 <= st && st < elf->symt_count);
+#ifdef DEBUG_LINK
+      print_relocation_entry(&(elf->reldata[i]));
+#endif
+    }
   } else {
     elf->reldata_count = 0;
     elf->reldata = NULL;
@@ -331,8 +367,8 @@ int main() {
   elf_arr[0] = malloc(sizeof(elf_t));
   elf_arr[1] = malloc(sizeof(elf_t));
 
-  parse_elf("/home/eintr/Projects/LinuxC/CSAPP/src/0x12/sum.elf.txt", elf_arr[0]);
-  parse_elf("/home/eintr/Projects/LinuxC/CSAPP/src/0x12/main.elf.txt", elf_arr[1]);
+  parse_elf("../file/sum.elf.txt", elf_arr[0]);
+  parse_elf("../file/main.elf.txt", elf_arr[1]);
 
   elf_t dst;
   link_elf((elf_t**)&elf_arr, 2, &dst);

@@ -47,8 +47,9 @@ typedef enum {
   R_X86_64_PLT32,
 } reltype;
 
+extern hashtable_t *link_constant_dict;
+
 typedef struct {
-  // TODO
   uint64_t r_row;
   uint64_t r_col;
   reltype type;
