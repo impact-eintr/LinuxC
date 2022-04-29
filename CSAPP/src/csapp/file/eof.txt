@@ -1,0 +1,45 @@
+45
+3
+.text,0x400000,5,33
+.data,0x400840,38,3
+.symbol,0x0,41,4
+push   %rbp
+mov    %rsp,%rbp
+mov    %rdi,-0x18(%rbp)
+mov    %rsi,-0x20(%rbp)
+movq   $0x0,-0x8(%rbp)
+movq   $0x0,-0x10(%rbp)
+jmp    3d <sum+0x3d>
+mov    -0x10(%rbp),%rax
+lea    0x0(,%rax,8),%rdx
+mov    -0x18(%rbp),%rax
+add    %rdx,%rax
+mov    (%rax),%rax
+add    %rax,-0x8(%rbp)
+addq   $0x1,-0x10(%rbp)
+mov    -0x10(%rbp),%rax
+cmp    -0x20(%rbp),%rax
+jb     1e <sum+0x1e>
+mov    0x0000000000000268(%rip),%rdx
+mov    -0x8(%rbp),%rax
+add    %rdx,%rax
+pop    %rbp
+ret
+push   %rbp
+mov    %rsp,%rbp
+sub    $0x10,%rsp
+mov    $0x2,%esi
+lea    0x00000000000000f0(%rip),%rdi 
+call   0xfffffffffffffba0            
+mov    %rax,-0x8(%rbp)
+mov    $0x0,%eax
+leave
+ret
+0x0000000012340000  
+0x0000000012340000  
+0x000000000000abcd  
+0x0000000f00000000  
+sum,STB_GLOBAL,STT_FUNC,.text,0,22
+main,STB_GLOBAL,STT_FUNC,.text,22,11
+array,STB_GLOBAL,STT_OBJECT,.data,0,2
+bias,STB_GLOBAL,STT_OBJECT,.data,2,1

@@ -375,5 +375,7 @@ int main() {
 
   free_elf(elf_arr[0]);
   free_elf(elf_arr[1]);
+
+  write_eof("../file/eof.txt", &dst);
 }
 #endif
