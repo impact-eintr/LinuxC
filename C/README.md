@@ -1147,7 +1147,7 @@ struct day {
 
 struct student_st{
   char *name;
-  day day;
+  struct day day;
 };
 ```
 
