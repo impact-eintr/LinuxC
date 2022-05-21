@@ -15,8 +15,11 @@ typedef struct {
   int value;
 } line_t;
 
-#define NUM_PROCESSOR (2048)
+#define NUM_PROCESSOR (16)
 
+// c0 c1 c2 ..... cn
+// [] [] [] [...] []
+// We assume that each cpu cache can only store one value
 line_t cache[NUM_PROCESSOR];
 
 int mem_value = 15213; // global value
@@ -50,6 +53,7 @@ int check_state() {
   return 0;
 }
 
+// i: index
 int read_cacheline(int i, int *read_value) {
   if (cache[i].state == MODIFIED) {
 #ifdef DEBUG
@@ -73,7 +77,6 @@ int read_cacheline(int i, int *read_value) {
     // read miss
     // bus boardcast read miss
     for (int j = 0; j < NUM_PROCESSOR; j++) {
-      // TODO 继续看这里
       if (i != j) {
         if (cache[j].state == MODIFIED) {
           // write back me_value modified
@@ -128,7 +131,7 @@ int read_cacheline(int i, int *read_value) {
   }
   return 0;
 }
-
+#define DEBUG
 int write_cacheline(int i, int write_value) {
   if (cache[i].state == MODIFIED) {
     // write hit
@@ -160,7 +163,7 @@ int write_cacheline(int i, int write_value) {
 #endif
     return 1;
   } else if (cache[i].state == INVALID) {
-    for (int j = 0; j < NUM_PROCESSOR; ++i) {
+    for (int j = 0; j < NUM_PROCESSOR; ++j) {
       if (i != j) {
         if (cache[j].state == MODIFIED) {
           // write back
@@ -223,7 +226,38 @@ int write_cacheline(int i, int write_value) {
   return 0;
 }
 
-int evict_cacheline(int i) {}
+// LRU
+// int return - if this event is related with target physical address
+int evict_cacheline(int i) {
+  if (cache[i].state == MODIFIED) {
+    // write back
+    mem_value = cache[i].value;
+    cache[i].state = INVALID;
+    cache[i].value = 0;
+    return 1;
+  } else if (cache[i].state == EXCLUSIVE) {
+    cache[i].state = INVALID;
+    cache[i].value = 0;
+    return 1;
+  } else if (cache[i].state == SHARED) {
+    cache[i].state = INVALID;
+    cache[i].value = 0;
+
+    int s_count = 0;
+    int last_s = -1;
+    for (int j = 0;j < NUM_PROCESSOR;++j) {
+      if (cache[j].state == SHARED) {
+        last_s = j;
+        s_count++;
+      }
+    }
+    if (s_count == 1) {
+      cache[last_s].state = EXCLUSIVE;
+    }
+    return 1;
+  }
+  return 0;
+}
 
 void print_cacheline() {
 
@@ -246,9 +280,42 @@ void print_cacheline() {
     default:
       c = '?';
     }
-    printf("\t[%d]      state %c        value %d\n", i, c, cache[i].value);
+    printf("\t[%d]\tstate %c\tvalue %d\n", i, c, cache[i].value);
   }
-  printf("\t                          mem value %d\n", mem_value);
+  printf("\t\t\t\tmem value %d\n", mem_value);
 }
 
-int mian() {}
+int main() {
+  srand(123456);
+  int read_value;
+  for (int i = 0;i < NUM_PROCESSOR;++i) {
+    cache[i].state = INVALID;
+    cache[i].value = 0;
+  }
+  print_cacheline();
+
+  for (int i = 0;i < 100000;++i) {
+    int core_index = rand() % NUM_PROCESSOR;
+    int op = rand() % 3;
+    int do_print = 0;
+    if (op == 0) {
+      do_print = read_cacheline(core_index, &read_value);
+      printf("read [%d]\n", core_index);
+    } else if (op == 1) {
+      do_print = write_cacheline(core_index, rand() % 1000);
+      printf("write [%d]\n", core_index);
+    } else if (op == 2) {
+      do_print = evict_cacheline(core_index);
+      printf("evict [%d]\n", core_index);
+    }
+
+    if (do_print) {
+      print_cacheline();
+    }
+    if (check_state() == 0) {
+      exit(1);
+    }
+  }
+
+  return 0;
+}

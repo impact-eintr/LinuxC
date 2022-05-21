@@ -539,9 +539,9 @@ static int d4; // local, object, .bss
 static int d5 = 0; // local, object, .bss
 static int d6 = 1; // local, object, .data
 
-int d7; // local, object, COMMON
-int d8 = 0; // local, object, .bss
-int d9 = 1; // local, object, .data
+int d7; // global, object, COMMON
+int d8 = 0; // global, object, .bss
+int d9 = 1; // global, object, .data
 
 __attribute__((weak)) int da; // weak, object, .bss
 __attribute__((weak)) int db = 0; // weak, object, .bss
@@ -589,19 +589,108 @@ Symbol table '.symtab' contains 18 entries:
     17: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT  UND d1
 ```
 
-## 0x12
+## 0x12 ELF文件解析
 
-## 0x13
+> linker的结构
+1. parse text
+2. symbel resolution
+3. relocation
 
-## 0x14
 
-## 0x15
+> 格式设计
 
-## 0x16
+| ELF.o                                                   | text                                      |
+|:-------------------------------------------------------:|:-----------------------------------------:|
+| header:SHT sht_off+size                                 | [0]line:effective [1] SHT_line            |
+| SHT:[0] [1] [2] 每一个都是entry 包含offset到section本身 | [2] <1> <2> <3> 每一行的格式：...,...,... |
+| section本体                                             | section本体                               |
+  
+## 0x13 符号解析
 
-## 0x17
+## 0x14 动态链接
 
-## 0x18
+GOT Global Offset Table
+
+``` c++
+>
+#include <string.h>
+
+#define MAX_GOT_SIZE (64)
+
+typedef void(*func_t)();
+typedef uint64_t plt_t;
+
+uint64_t got[MAX_GOT_SIZE];
+
+uint64_t dynamic_linker(uint64_t address) {
+  // calculate
+  return 0xFFFFFFFFFFFFFFFF;
+}
+
+void call(uint64_t address) {
+  func_t func;;
+  *(uint64_t *)&func = address;
+  func();
+}
+
+void plt_call(uint64_t address) {
+  plt_t plt_address = address;
+
+  if (got[plt_address] == 0) {
+    // not overwritten
+    got[plt_address] = dynamic_linker(address);
+  } else {
+    // found
+    call(got[plt_address]);
+  }
+}
+
+int main() {
+  memset(got, 0, sizeof(uint64_t) * MAX_GOT_SIZE);
+}
+
+```
+
+## 0x15 总结
+
+我们所编写的代码文件都是 ASCII的一个文本文件,我们如何将之变为一个进程呢？
+
+1. cpp 预处理 展开宏定义 直接替换
+2. as 汇编 交给编译器中的`cc1` 、 `as` 变成.o的目标文件 也就是elf
+3. ld 链接 将elf进行符号解析、段合并、重定位为eof
+
+链接器只能看到最外层符号，也就是说只有全局变量、函数(这里不考虑匿名函数)。
+
+
+## 0x16 虚拟内存
+
+cpu与物理内存之间有bus(数据总线),cpu内部有三级缓存(cache):L1 L2 L3。
+
+而cpu看到的“物理内存”其实是`虚拟内存`,MMU负责将虚拟内存映射到物理内存。对于每一个进程而言，内存都是属于自己的，可以尽情使用，从0x00400000开始一直到0xFFFFFFFFFFFFFFFF,分别有.text .rodata .data heap mmap(动态链接展开处) stack。这些地址通过MMU映射到物理内存的不同区域，而不同的进程之间不共享虚拟内存。
+
+## 0x17 局部性
+
+
+## 0x18 MESI缓存一致性模型 并行计算性能
+
+> M Exclusive Modified
+
+多个处理器的缓存之间并不共享物理内存，每块缓存都只保存自己的数据，且该部分数据**已被修改**
+> E Exclusive Clean
+
+多个处理器的缓存之间并不共享物理内存，每块缓存都只保存自己的数据，且该部分数据**未被修改**
+> S Shared Clean
+
+多个处理器的缓存之间共享物理内存，多个缓存块共同保存同一物理地址的数据，且该数据都是未修改的
+> I Invalid
+没有被缓存的数据
+
+| Ci\Cj | M | E | S | I |
+|-------|---|---|---|---|
+|   M   | X | X | X | O |
+|   E   | X | X | X | O |
+|   S   | X | X | O | O |
+|   I   | O | O | O | O |
 
 ## 0x19
 

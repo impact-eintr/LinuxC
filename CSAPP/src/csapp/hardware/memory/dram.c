@@ -1,15 +1,30 @@
+#include <assert.h>
 #include <stdint.h>
 #include <string.h>
-#include <assert.h>
 
+#include "../../headers/address.h"
+#include "../../headers/common.h"
 #include "../../headers/cpu.h"
 #include "../../headers/memory.h"
-#include "../../headers/common.h"
+
+#define USE_SRAM_CACHE
+
+#ifdef USE_SRAM_CACHE
+uint8_t sram_cache_read(uint64_t paddr_value);
+void sram_cache_write(uint64_t paddr_value, uint8_t data);
+#endif
+
+#ifdef USE_PAGETABLE_VA2PA
+void pagemap_update_time(uint64_t paddr);
+void pagemap_dirty(uint64_t ppn);
+#endif
 
 uint64_t cpu_read64bits_dram(uint64_t paddr) {
   uint64_t val = 0x0;
 #ifdef USE_SRAM_CACHE
-  // TODO
+  for (int i = 0; i < 8; ++i) {
+    val += (sram_cache_read(paddr + i) << (i * 8));
+  }
 #else
   // little-endian
   val += (((uint64_t)pm[paddr + 0]) << 0);
@@ -30,7 +45,9 @@ uint64_t cpu_read64bits_dram(uint64_t paddr) {
 
 void cpu_write64bits_dram(uint64_t paddr, uint64_t data) {
 #ifdef USE_SRAM_CACHE
-  // TODO
+  for (int i = 0; i < 8; ++i) {
+    sram_cache_write(paddr + i, (data >> (i * 8)) & 0xff);
+  }
 #else
   pm[paddr +0] = (data >> 0) & 0xff;
   pm[paddr +1] = (data >> 8) & 0xff;
@@ -51,6 +68,9 @@ void cpu_readinst_dram(uint64_t paddr, char *buf) {
   for (int i = 0;i < MAX_INSTRUCTION_CHAR;++i) {
     buf[i] = (char)pm[paddr+i];
   }
+#ifdef USE_PAGETABLE_VA2PA
+  // TODO
+#endif
 }
 
 void cpu_writeinst_dram(uint64_t paddr, const char *str) {
@@ -63,5 +83,22 @@ void cpu_writeinst_dram(uint64_t paddr, const char *str) {
     } else {
       pm[paddr + i] = 0;
     }
+  }
+#ifdef USE_PAGETABLE_VA2PA
+  // TODO
+#endif
+}
+
+void bus_read_cacheline(uint64_t paddr, uint8_t *block) {
+  uint64_t dram_base = ((paddr >> SRAM_CACHE_OFFSET_LENGTH) << SRAM_CACHE_OFFSET_LENGTH); // 8 align
+  for (int i = 0;i < (1 << SRAM_CACHE_OFFSET_LENGTH);++i) {
+    block[i] = pm[dram_base+i];
+  }
+}
+
+void bus_write_cacheline(uint64_t paddr, uint8_t *block) {
+  uint64_t dram_base = ((paddr >> SRAM_CACHE_OFFSET_LENGTH) << SRAM_CACHE_OFFSET_LENGTH); // 8 align
+  for (int i = 0;i < (1 << SRAM_CACHE_OFFSET_LENGTH);++i) {
+    pm[dram_base+i] = block[i];
   }
 }
