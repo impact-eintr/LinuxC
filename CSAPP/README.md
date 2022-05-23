@@ -692,11 +692,163 @@ cpu与物理内存之间有bus(数据总线),cpu内部有三级缓存(cache):L1 
 |   S   | X | X | O | O |
 |   I   | O | O | O | O |
 
-## 0x19
+## 0x19 并行计算的性能问题
+1. True Sharing
+一个全局变量sum,数个线程共享，sum从内存读取后被多个线程读写，由于每一个线程都占据一个cpu,每个cpu都有自己的cache,就会触发MESI导致大量的write back | write allocate | bus broadcast等非常消耗资源的操作。
+2. False Sharing
+一种直觉上的解决方案是使用数个变量存放sum的分片，之后再reduce。但这样将触发False Sharing。
+False Asharing :每个线程拥有自己的sum,但是这些sum是被分配在同一个stack上的，这部分数据很有可能被缓存到/一个cacheline中，导致这一块cacheline更新时继续触发MESI，导致大量的write back | write allocate | bus broadcast等非常消耗资源的操作。
 
-## 0x1A
+``` c++
+SOURCE
 
-## 0x1B
+#include <pthread.h>
+#include <sched.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define PAGE_BYTES (4096)
+
+int64_t result_page0[PAGE_BYTES / sizeof(int64_t)];
+int64_t result_page1[PAGE_BYTES / sizeof(int64_t)];
+int64_t result_page2[PAGE_BYTES / sizeof(int64_t)];
+int64_t result_page3[PAGE_BYTES / sizeof(int64_t)];
+
+typedef struct {
+  int64_t *cache_write_ptr;
+  int cpu_id;
+  int length;
+} param_t;
+
+void *work_thread(void *param) {
+  param_t *p = (param_t *)param;
+  int64_t *ptr = p->cache_write_ptr;
+  int cpu_id = p->cpu_id;
+  int length = p->length;
+
+  cpu_set_t mask;
+  CPU_ZERO(&mask);
+  CPU_SET(cpu_id, &mask);
+  pthread_setaffinity_np(pthread_self(), sizeof(mask),
+                         &mask); // 设置thread的cpu亲和性
+
+  printf("   * thread[%lu] running on cpu[%d] writes to %p\n", pthread_self(),
+         sched_getcpu(), ptr);
+
+  for (int i = 0; i < length; ++i) {
+    *ptr += 1;
+  }
+  return NULL;
+}
+
+int LENGTH = 50000000;
+
+void true_sharing_run() {
+  pthread_t t1, t2;
+  param_t p1 = {
+      .cache_write_ptr = &result_page0[0], .cpu_id = 0, .length = LENGTH};
+  param_t p2 = {
+      .cache_write_ptr = &result_page0[0], .cpu_id = 1, .length = LENGTH};
+
+  long t0 = clock();
+  pthread_create(&t1, NULL, work_thread, (void *)&p1);
+  pthread_create(&t2, NULL, work_thread, (void *)&p2);
+  pthread_join(t1, NULL);
+  pthread_join(t2, NULL);
+  printf("[True Sharing]\n\tresult: %ld; elapsed tick tock: %ld\n",
+         result_page0[0], clock() - t0);
+}
+
+void false_sharing_run() {
+  pthread_t t1, t2;
+
+  param_t p1 = {
+      .cache_write_ptr = &result_page1[0], .cpu_id = 0, .length = LENGTH};
+
+  param_t p2 = {
+      .cache_write_ptr = &result_page1[1], .cpu_id = 1, .length = LENGTH};
+
+  long t0 = clock();
+
+  pthread_create(&t1, NULL, work_thread, (void *)&p1);
+  pthread_create(&t2, NULL, work_thread, (void *)&p2);
+
+  pthread_join(t1, NULL);
+  pthread_join(t2, NULL);
+
+  printf("[False Sharing]\n\tresult: %ld; elapsed tick tock: %ld\n",
+         result_page1[0] + result_page1[1], clock() - t0);
+}
+
+void no_sharing_run() {
+  pthread_t t1, t2;
+
+  param_t p1 = {
+      .cache_write_ptr = &result_page2[0], .cpu_id = 0, .length = LENGTH};
+
+  param_t p2 = {
+      .cache_write_ptr = &result_page3[0], .cpu_id = 1, .length = LENGTH};
+
+  long t0 = clock();
+
+  pthread_create(&t1, NULL, work_thread, (void *)&p1);
+  pthread_create(&t2, NULL, work_thread, (void *)&p2);
+
+  pthread_join(t1, NULL);
+  pthread_join(t2, NULL);
+
+  printf("[No Sharing]\n\tresult: %ld; elapsed tick tock: %ld\n",
+         result_page2[0] + result_page3[0], clock() - t0);
+}
+
+int main() {
+  true_sharing_run();
+  false_sharing_run();
+  no_sharing_run();
+}
+
+```
+
+## 0x1A 内存 虚拟地址 物理地址
+> mod
+1. virtual address大小与 physics address 可以匹配
+2. 访问冲突
+
+> hashap
+1. va 与 pa 可以匹配
+2. 访问不冲突
+3. 性能太差 破坏了局部性 需要(1+2k)N的空间来存储N的有效数据
+
+> segment
+1. va 与 pa可以匹配
+2. 访问不冲突
+3. 使用**(va0, pa0, D)** 的三元组就可以描述复杂度骤降 3M M为#segment 远远小于N
+4. 但也是有问题的，首先是仍然会产生很多碎片，增加计算复杂度
+> page
+1. va 与 pa可以匹配
+2. 访问不冲突
+3. 使用定长 (va0, pa0)
+4. Table[VPN(virtual page number)] + VPO(virtual page offset) => PA(physics address)
+Table[VPN] => PPN(physics page number)
+VPN + VPO => VA(virtual address)
+5. 仍然会有碎片，但已经是比较好的解决方案了。
+
+## 0x1B 多级页表 
+
+> 多级页表来解决 VPN 范围 2^^36的问题 鉴于其稀疏和局部性的特点
+
+1. PGD page global directory     1/(1<<9)
+2. PUD page upper directory      1/(1<<18)
+3. PMD page middle directory     1/(1<<27)
+4. PT  page table                1/(1<<36)
+
+最终需要分配的页表为 #PGD+#PUD+#PMD+#PT，最坏情况就是一颗完全512叉树
+
+[...|VPN(PGD PUD PMD PT 各9bit 共36bit)|VPO(等同于PPO 12bit)] Virtual Address -> 48bit
+
+[...|PPN(40bit)|PPO(等同于VPO 12bit)] Physics Address -> 52bit
 
 ## 0x1C
 
