@@ -6,16 +6,58 @@
 #define PHYSICAL_MEMORY_SPACE (65536)
 #define MAX_NUM_PHYSICAL_PAGE (16)
 
+#define PAGE_TABLE_ENTRY_NUM (512)
+#define PAGE_SIZE (4096)
+
 uint8_t pm[PHYSICAL_MEMORY_SPACE];
 
 // page table struct
 
+// PGD PUD PMD Level 1 2 3 Page Table Entry
 typedef union {
   uint64_t pte_value;
+  struct {
+    uint64_t present : 1;
+    uint64_t readonly : 1;
+    uint64_t usermode : 1;
+    uint64_t writethough : 1;
+    uint64_t cachedisabled : 1;
+    uint64_t reference : 1;
+    uint64_t unused6 : 1;
+    uint64_t smallpage : 1;
+    uint64_t global : 1;
+    uint64_t unused9_11 : 3;
+    uint64_t paddr : 50; // virtua; address (48 bits) pn simulator't heap
+    uint64_t xdisabled : 1;
+  };
+  struct {
+    uint64_t _present :1;
+    uint64_t saddr :63; // swap space address
+  };
 } pte123_t; // 8 bytes = 64bits
 
+// PT
 typedef union {
   uint64_t pte_value;
+  struct {
+    uint64_t present : 1; // present = 1
+    uint64_t readonly : 1;
+    uint64_t usermode : 1;
+    uint64_t writethough : 1;
+    uint64_t cachedisabled : 1;
+    uint64_t reference : 1;
+    uint64_t dirty : 1; // dirty bit - 1: dirty; 0: clean
+    uint64_t zero7 : 1;
+    uint64_t global : 1;
+    uint64_t unused9_11 : 3;
+    uint64_t ppn : 40;
+    uint64_t unused52_62 : 10;
+    uint64_t xdisabled : 1;
+  };
+  struct {
+    uint64_t _present : 1; // present = 1
+    uint64_t saddr : 63;   // swap space address
+  };
 } pte4_t; // 8 bytes = 64bits
 
 /*======================================*/

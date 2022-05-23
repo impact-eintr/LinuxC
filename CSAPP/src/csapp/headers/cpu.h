@@ -177,6 +177,20 @@ typedef union {
 } cpu_pc_t;
 cpu_pc_t cpu_pc;
 
+
+// TSS
+
+// Control registers
+typedef struct {
+  uint64_t cr0;
+  uint64_t cr1;
+  uint64_t cr2;
+  uint64_t cr3; // should be a 40-bits ppN for PGD in DRAM
+                // but we are using 48-bits virtual address on simulator's heap
+} cpu_cr_t;
+cpu_cr_t cpu_controls;
+
+
 #define NUM_INSTRTYPE 14
 void instruction_cycle();
 
