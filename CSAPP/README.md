@@ -847,11 +847,29 @@ VPN + VPO => VA(virtual address)
 最终需要分配的页表为 #PGD+#PUD+#PMD+#PT，最坏情况就是一颗完全512叉树
 
 [...|VPN(PGD PUD PMD PT 各9bit 共36bit)|VPO(等同于PPO 12bit)] Virtual Address -> 48bit
-
+  * [ ] 
 [...|PPN(40bit)|PPO(等同于VPO 12bit)] Physics Address -> 52bit
+_
+## 0x1C 虚拟内存系统总览
 
-## 0x1C
+进程在Linux中其实就是一段活动的内存，用task_struct表示，这个其实就是PCB（Process Control Block）
 
+在task_struct中，关于内存管理的的有两个结构：
+1. pgd_t
+2. vm_area_struct
+
+> pgd_t 负责地址翻译 也就是MMU
+
+一个Vittual Memory Address 分为 VPN+VPO VPN分为4各部分 PGD PUD PMD PT
+
+使用VPN1从全局PGD中找到PUD，使用VPN2从PUD中定位PMD，使用VPN3从PMD中定位PT，使用VPN4从PT中定位PPN，然后PPN+PPO(VPO)=PAddr
+
+这是从虚拟地址到物理地址的正向映射
+
+
+> vm_area_struct 用于swap out/in 构建反向映射 然后更新 page table entry(present)
+
+![img](img/virtual memory system.png)
 ## 0x1D
 
 ## 0x1E
