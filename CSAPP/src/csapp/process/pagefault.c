@@ -8,6 +8,7 @@
 #include "../headers/common.h"
 #include "../headers/interrupt.h"
 #include "../headers/cpu.h"
+#include "../headers/process.h"
 
 
 // swap in / out
@@ -42,7 +43,7 @@ static pte4_t* get_entry(pte123_t *pgd, address_t *vaddr) {
   while(level < 4) {
     int vpn = vpns[level];
     if (tab[vpn].present != 1) {
-      // TODO allocate a new page for next level
+      // allocate a new page for next level
       pte123_t *new_tab =
           (pte123_t *)KERNEL_malloc(PAGE_TABLE_ENTRY_NUM * sizeof(pte123_t));
       // .paddr field is 50 bits
@@ -129,6 +130,71 @@ void unmap_pte4(uint64_t ppn) {
   page_map[ppn].pte4 = NULL;
 }
 
+// TODO fix pagefault
 void fix_pagefault() {
-  // TODO
+  // get page table directory from rsp
+  pcb_t *pcb = get_current_pcb();
+  pte123_t *pgd = pcb->mm.pgd;
+
+  // get the fauling address from MMU register
+  // TODO where initialize mmu_vaddr_pagefault
+  address_t vaddr = {.address_value = mmu_vaddr_pagefault};
+
+  // get the level 4 page table entry
+  pte4_t *pte = get_entry(pgd, &vaddr);
+
+  // 1 try to request one free physical page from DRAM
+  for (int i = 0;i < MAX_NUM_PHYSICAL_PAGE;++i) {
+    if (page_map[i].allocated == 0) {
+      // found i as free ppn
+      map_pte4(pte, i);
+      printf("\033[34;1m\tPageFault: use free ppn %d\033[0m\n", i);
+      return;
+    }
+  }
+
+  // 2. no free physical page: select one clean page (LRU) and overwrite
+  // int this case, there is no DRAM - DISK transaction
+  // you know you can optimize this loop
+  int lru_ppn = -1;
+  int lru_time = -1;
+  for (int i = 0;i < MAX_NUM_PHYSICAL_PAGE;++i) {
+    if (page_map[i].dirty == 0 && lru_time < page_map[i].time) {
+      lru_time = page_map[i].time;
+      lru_ppn = i;
+    }
+  }
+  // this si the selected ppn for vaddr
+  if (-1 != lru_ppn && lru_ppn < MAX_NUM_PHYSICAL_PAGE) {
+    unmap_pte4(lru_ppn);
+    // load page from disk to physical memory
+    // at the victim's ppn
+    swap_in(pte->saddr, lru_ppn);
+    map_pte4(pte, lru_ppn);
+
+    printf("\033[34;1m\tPageFault: discard clean ppn %d as victim\033[0m\n", lru_ppn);
+    return;
+  }
+
+  // 3. no free nor clean physical page: select one LRU victim
+  // write back (swap out) the DIRTY victim to disk
+  lru_ppn = -1;
+  lru_time = -1;
+  for (int i = 0;i < MAX_NUM_PHYSICAL_PAGE; ++i) {
+    if (lru_time < page_map[i].time) {
+      lru_time = page_map[i].time;
+      lru_ppn = i;
+    }
+  }
+  assert(0 <= lru_ppn && lru_ppn < MAX_NUM_PHYSICAL_PAGE);
+
+  // write back
+  swap_out(page_map[lru_ppn].saddr, lru_ppn);
+  // unmap victim
+  unmap_pte4(lru_ppn);
+  // load page from disk to physical memory
+  swap_in(pte->saddr, lru_ppn);
+  map_pte4(pte, lru_ppn);
+
+  printf("\033[34;1m\tPageFault: write back & use ppn %d\033[0m\n", lru_ppn);
 }
