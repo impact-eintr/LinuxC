@@ -108,11 +108,64 @@ static void check_free_block() {
 void check_heap_correctness();
 
 static uint64_t merge_blocks_as_free(uint64_t low, uint64_t high) {
+  assert(low % 8 == 4);
+  assert(high % 8 == 4);
+  assert(get_firstblock() <= low && low < get_lastblock());
+  assert(get_firstblock() < high && high <= get_lastblock());
+  assert(get_nextheader(low) == high);
+  assert(get_prevheader(high) == low);
 
+  // must merge as free
+  uint32_t blocksize = get_blocksize(low) + get_blocksize(high);
+
+  set_blocksize(low, blocksize);
+  set_allocated(low, FREE);
+
+  uint64_t footer = get_footer(low);
+  set_blocksize(footer, blocksize);
+  set_allocated(footer, FREE);
+
+  return low;
 }
 
 static uint64_t try_alloc_with_splitting(uint64_t block_vaddr, uint32_t request_blocksize) {
+  if (request_blocksize < 8) {
+    return NIL;
+  }
 
+  uint64_t b = block_vaddr;
+  uint32_t b_blocksize = get_blocksize(b);
+  uint32_t b_allocated = get_allocated(b);
+
+  if (b_allocated == FREE && b_blocksize >= request_blocksize) {
+    // allocate this block
+    delete_free_block(b);
+    uint64_t left_footer = get_footer(b);
+
+    set_allocated(b, ALLOCATED);
+    set_blocksize(b, request_blocksize);
+
+    uint64_t b_footer = b + request_blocksize - 4;
+    set_allocated(b_footer, ALLOCATED);
+    set_blocksize(b_footer, request_blocksize);
+
+    uint32_t left_size = b_blocksize - request_blocksize;
+    if (left_size >= 8) {
+      // split this block `b`
+      // b_blocksize - request_blocksize >= 8
+      uint64_t left_header = get_nextheader(b);
+      set_allocated(left_header, FREE);
+      set_blocksize(left_header, b_blocksize - request_blocksize);
+
+      set_allocated(left_footer, FREE);
+      set_blocksize(left_footer, b_blocksize - request_blocksize);
+
+      assert(get_footer(left_header) == left_footer);
+      insert_free_block(left_header);
+    }
+    return get_payload(b);
+  }
+  return NIL;
 }
 
 static uint64_t try_extend_heap_to_alloc(uint32_t size) {
@@ -178,13 +231,123 @@ uint64_t mem_alloc(uint32_t size) {
   return payload_vaddr;
 }
 
-void mem_free(uint64_t payload_vaddr) {}
+void mem_free(uint64_t payload_vaddr) {
+  if (payload_vaddr == NIL) {
+    return;
+  }
+
+  assert(get_firstblock() < payload_vaddr && payload_vaddr < get_epilogue());
+  assert((payload_vaddr & 0x7) == 0x0);
+
+  // request can be first or last block
+  uint64_t req_header = get_header(payload_vaddr);
+  uint64_t req_footer = get_footer(req_header);
+
+  uint32_t req_allocated = get_allocated(req_header);
+  uint32_t req_blocksize = get_blocksize(req_header);
+  assert(req_allocated == ALLOCATED);
+
+  // block starting address of next & prev blocks
+  uint64_t next = get_nextheader(req_header);
+  uint64_t prev = get_prevheader(req_header);
+
+  uint32_t next_allocated = get_allocated(next);
+  uint32_t prev_allocated = get_allocated(prev);
+
+  if (next_allocated == ALLOCATED && prev_allocated == ALLOCATED) { // *A(A->F)A*
+    set_allocated(req_header, FREE);
+    set_allocated(req_footer, FREE);
+    insert_free_block(req_header);
+
+#ifdef DEBUG_MALLOC
+    check_heap_correctness();
+    check_free_block();
+#endif
+  } else if (next_allocated == FREE && prev_allocated == ALLOCATED) { // *A(A->F)FA
+    delete_free_block(next);
+    uint64_t on_free= merge_blocks_as_free(req_header, next);
+    insert_free_block(on_free);
+
+#ifdef DEBUG_MALLOC
+    check_heap_correctness();
+    check_free_block();
+#endif
+  } else if (next_allocated == ALLOCATED && prev_allocated == FREE) { // AF(A->F)A*
+    delete_free_block(prev);
+    uint64_t on_free= merge_blocks_as_free(prev, req_header);
+    insert_free_block(on_free);
+
+#ifdef DEBUG_MALLOC
+    check_heap_correctness();
+    check_free_block();
+#endif
+  } else if (next_allocated == FREE && prev_allocated == FREE) { // AF(A->F)FA
+    delete_free_block(prev);
+    delete_free_block(next);
+    uint64_t one_free = merge_blocks_as_free(merge_blocks_as_free(prev, req_header), next);
+    insert_free_block(one_free);
+
+#ifdef DEBUG_MALLOC
+    check_heap_correctness();
+    check_free_block();
+#endif
+  } else {
+#ifdef DEBUG_MALLOC
+    printf("failed to free\n");
+    exit(0);
+#endif
+  }
+}
 
 // ------------------------------------
 // Debugging and Correctness Checking
 // ------------------------------------
-void check_heap_correctness() {}
+void check_heap_correctness() {
+  int liner_free_counter = 0;
+  uint64_t p = get_firstblock(); // iterator
+  while(p != NIL && p <= get_lastblock()) {
+    assert(p % 8 == 4);
+    assert(get_firstblock() <= p && p <= get_lastblock());
 
-static void block_info_print(uint64_t h) {}
+    uint64_t f = get_footer(p);
+    uint32_t blocksize = get_blocksize(p);
+    if (blocksize != 8) {
+      assert(get_blocksize(p) == get_blocksize(f));
+      assert(get_allocated(p) == get_allocated(f));
+    }
 
-static void heap_blocks_print() {}
+    if (get_allocated(p) == FREE) {
+      liner_free_counter += 1;
+    } else {
+      liner_free_counter = 0;
+    }
+    assert(liner_free_counter <= 1); // We don't want to have two consecutive free blocks
+    p = get_nextheader(p);
+  }
+}
+
+static void block_info_print(uint64_t h) {
+  uint32_t a = get_allocated(h);
+  uint32_t s = get_blocksize(h);
+  uint64_t f = get_footer(h);
+
+  uint32_t hv = *(uint32_t *)&heap[h];
+  uint32_t fv = *(uint32_t *)&heap[f];
+
+  uint32_t p8 = (hv >> 1) & 0x1;
+  uint32_t b8 = (hv >> 2) & 0x1;
+  uint32_t rb = (fv >> 1) & 0x1;
+
+  printf("H:%lu,\tF:%lu,\tS:%u,\t(A:%u,RB:%u,B8:%u,P8:%u)\n", h, f, s, a, rb, b8, p8);
+}
+
+static void heap_blocks_print() {
+  printf("============\nheap blocks:\n");
+  uint64_t h = get_firstblock();
+  int i = 0;
+  while (i < (HEAP_MAX_SIZE / 8) && h != NIL && h < get_epilogue()) {
+    block_info_print(h);
+    h = get_nextheader(h);
+  }
+  printf("============\n");
+}
