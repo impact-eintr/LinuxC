@@ -26,6 +26,7 @@ uint32_t extend_heap(uint32_t size) {
   set_blocksize(epilogue, 0);
   return size;
 }
+#define IMPLICIT_FREE_LIST
 
 // Free Block Mamagement Implemented
 #ifdef IMPLICIT_FREE_LIST
@@ -97,7 +98,14 @@ static int delete_free_block(uint64_t free_header) {
 }
 
 static void check_free_block() {
-
+#ifdef IMPLICIT_FREE_LIST
+  return implicit_list_check_free_block();
+#elif defined (EXPLICIT_FREE_LIST)
+  return explicit_list_check_free_block();
+#elif defined (REDBLACK_TREE)
+  return redblack_tree_check_free_block();
+#endif
+  assert(0);
 }
 
 // ------------------------------
@@ -169,7 +177,129 @@ static uint64_t try_alloc_with_splitting(uint64_t block_vaddr, uint32_t request_
 }
 
 static uint64_t try_extend_heap_to_alloc(uint32_t size) {
+  // get the size to be added
+  uint64_t old_last = get_lastblock();
 
+  uint32_t last_allocated = get_allocated(old_last);
+  uint32_t last_blocksize = get_blocksize(old_last);
+
+  uint32_t to_request_from_OS = size;
+  if (last_allocated == FREE) {
+    // last block can help the request
+    to_request_from_OS -= last_blocksize;
+    delete_free_block(old_last);
+  }
+
+  uint32_t old_epilogue = get_epilogue();
+  uint32_t os_allocated_size = extend_heap(to_request_from_OS);
+  if (os_allocated_size != 0) {
+    assert(os_allocated_size >= 4096);
+    assert(os_allocated_size % 4096 == 0);
+
+    uint64_t payload_header = NIL;
+
+    if (last_allocated == ALLOCATED) {
+      // no merging is needed
+      // take place the old epilogue as new last
+      uint64_t new_last = old_epilogue;
+      set_allocated(new_last, FREE);
+      set_blocksize(new_last, os_allocated_size);
+
+      // set the new footer
+      uint64_t new_last_footer = get_footer(new_last);
+      set_allocated(new_last_footer, FREE);
+      set_blocksize(new_last_footer, os_allocated_size);
+      insert_free_block(new_last);
+
+      payload_header = new_last;
+    } else {
+      // merging with last_block is needed
+      set_allocated(old_last, FREE);
+      set_blocksize(old_last, last_blocksize + os_allocated_size);
+
+      uint64_t last_footer = get_footer(old_last);
+      set_allocated(last_footer, FREE);
+      set_blocksize(last_footer, last_blocksize + os_allocated_size);
+
+      // blocksize is different now
+      // consider the balanced tree index on blocksize, it must be reinserted
+      insert_free_block(old_last);
+
+      payload_header = old_last;
+    }
+
+    // try to allocate
+    uint64_t payload_vaddr = try_alloc_with_splitting(payload_header, size);
+    if (payload_vaddr != NIL) {
+#ifdef DEBUG_MALLOC
+      check_heap_correctness();
+#endif
+      return payload_vaddr;
+    }
+  }
+
+  if (last_allocated == FREE) {
+    insert_free_block(old_last);
+  }
+  // else, no page can be allocated
+#ifdef DEBUG_MALLOC
+  check_heap_correctness();
+  printf("OS cannot allocate physical page for heap!\n");
+#endif
+  return NIL;
+}
+
+// ------------------------------------
+// Debugging and Correctness Checking
+// ------------------------------------
+void check_heap_correctness() {
+  int liner_free_counter = 0;
+  uint64_t p = get_firstblock(); // iterator
+  while(p != NIL && p <= get_lastblock()) {
+    assert(p % 8 == 4);
+    assert(get_firstblock() <= p && p <= get_lastblock());
+
+    uint64_t f = get_footer(p);
+    uint32_t blocksize = get_blocksize(p);
+    if (blocksize != 8) {
+      assert(get_blocksize(p) == get_blocksize(f));
+      assert(get_allocated(p) == get_allocated(f));
+    }
+
+    if (get_allocated(p) == FREE) {
+      liner_free_counter += 1;
+    } else {
+      liner_free_counter = 0;
+    }
+    assert(liner_free_counter <= 1); // We don't want to have two consecutive free blocks
+    p = get_nextheader(p);
+  }
+}
+
+static void block_info_print(uint64_t h) {
+  uint32_t a = get_allocated(h);
+  uint32_t s = get_blocksize(h);
+  uint64_t f = get_footer(h);
+
+  uint32_t hv = *(uint32_t *)&heap[h];
+  uint32_t fv = *(uint32_t *)&heap[f];
+
+  uint32_t p8 = (hv >> 1) & 0x1;
+  uint32_t b8 = (hv >> 2) & 0x1;
+  uint32_t rb = (fv >> 1) & 0x1;
+
+  printf("H:%lu,\tF:%lu,\tS:%u,\t(A:%u,RB:%u,B8:%u,P8:%u)\n", h, f, s, a, rb, b8, p8);
+}
+
+static void heap_blocks_print() {
+  printf("============\nheap blocks:\n");
+  uint64_t h = get_firstblock();
+  int i = 0;
+  while (i < (HEAP_MAX_SIZE / 8) && h != NIL && h < get_epilogue()) {
+    block_info_print(h);
+    h = get_nextheader(h);
+  }
+  printf("============\n");
 }
 
 // interface
@@ -211,6 +341,7 @@ int heap_init() {
   return 1;
 }
 
+#define DEBUG_MALLOC
 uint64_t mem_alloc(uint32_t size) {
   assert(0 < size && size < HEAP_MAX_SIZE - 4 - 8 - 4);
 
@@ -227,6 +358,7 @@ uint64_t mem_alloc(uint32_t size) {
 #ifdef DEBUG_MALLOC
   check_heap_correctness();
   check_free_block();
+  heap_blocks_print();
 #endif
   return payload_vaddr;
 }
@@ -297,57 +429,4 @@ void mem_free(uint64_t payload_vaddr) {
     exit(0);
 #endif
   }
-}
-
-// ------------------------------------
-// Debugging and Correctness Checking
-// ------------------------------------
-void check_heap_correctness() {
-  int liner_free_counter = 0;
-  uint64_t p = get_firstblock(); // iterator
-  while(p != NIL && p <= get_lastblock()) {
-    assert(p % 8 == 4);
-    assert(get_firstblock() <= p && p <= get_lastblock());
-
-    uint64_t f = get_footer(p);
-    uint32_t blocksize = get_blocksize(p);
-    if (blocksize != 8) {
-      assert(get_blocksize(p) == get_blocksize(f));
-      assert(get_allocated(p) == get_allocated(f));
-    }
-
-    if (get_allocated(p) == FREE) {
-      liner_free_counter += 1;
-    } else {
-      liner_free_counter = 0;
-    }
-    assert(liner_free_counter <= 1); // We don't want to have two consecutive free blocks
-    p = get_nextheader(p);
-  }
-}
-
-static void block_info_print(uint64_t h) {
-  uint32_t a = get_allocated(h);
-  uint32_t s = get_blocksize(h);
-  uint64_t f = get_footer(h);
-
-  uint32_t hv = *(uint32_t *)&heap[h];
-  uint32_t fv = *(uint32_t *)&heap[f];
-
-  uint32_t p8 = (hv >> 1) & 0x1;
-  uint32_t b8 = (hv >> 2) & 0x1;
-  uint32_t rb = (fv >> 1) & 0x1;
-
-  printf("H:%lu,\tF:%lu,\tS:%u,\t(A:%u,RB:%u,B8:%u,P8:%u)\n", h, f, s, a, rb, b8, p8);
-}
-
-static void heap_blocks_print() {
-  printf("============\nheap blocks:\n");
-  uint64_t h = get_firstblock();
-  int i = 0;
-  while (i < (HEAP_MAX_SIZE / 8) && h != NIL && h < get_epilogue()) {
-    block_info_print(h);
-    h = get_nextheader(h);
-  }
-  printf("============\n");
 }

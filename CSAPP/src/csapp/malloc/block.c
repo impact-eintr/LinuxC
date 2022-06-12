@@ -24,7 +24,7 @@ static void set_bit(uint64_t vaddr, int bit_offset) {
   assert((vaddr & 0x3) == 0); // 8 bits align
   assert(get_prologue() <= vaddr && vaddr <= get_epilogue());
 
-  *(uint32_t *)&heap[vaddr] |= (~vector);
+  *(uint32_t *)&heap[vaddr] |= vector;
 }
 
 // set this bit 0
@@ -215,7 +215,6 @@ void set_allocated(uint64_t header_vaddr, uint32_t allocated) {
   }
   assert(get_prologue() <= header_vaddr && header_vaddr <= get_epilogue());
   assert((header_vaddr & 0x3) == 0x0);
-
   if (header_vaddr % 8 == 0) {
     // footer
     uint64_t next_header_vaddr = header_vaddr + 4;

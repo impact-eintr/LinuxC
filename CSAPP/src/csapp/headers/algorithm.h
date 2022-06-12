@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 
-#define DEFARG(name, defval) ((#name[0]) ? (name + 0) : defval)
 #define NULL_ID (0)
 
 /*======================================*/
@@ -39,6 +38,7 @@ typedef struct {
   hashtable_bucket_t **directory;
 } hashtable_t;
 
+#define DEFARG(name, defval) ((#name[0]) ? (name + 0) : defval)
 #define hashtable_construct(arg0) _hashtable_construct(DEFARG(arg0, 32));
 hashtable_t *_hashtable_construct(int size);
 void hashtable_free(hashtable_t *tab);
