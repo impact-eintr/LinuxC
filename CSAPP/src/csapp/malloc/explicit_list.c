@@ -70,13 +70,13 @@ static int update_head(linkedlist_internal_t *this, uint64_t block_vaddr) {
 // The explicit free linked list
 linkedlist_internal_t explicit_list;
 
-static void explicit_list_init() {
+void explicit_list_init() {
   explicit_list.head = NULL_ID;
   explicit_list.count = 0;
   explicit_list.update_head = &update_head;
 }
 
-static uint64_t explicit_list_search(uint32_t free_blocksize) {
+uint64_t explicit_list_search(uint32_t free_blocksize) {
   // search explicit free list
   uint64_t b = explicit_list.head;
   uint32_t counter_copy = explicit_list.count;
@@ -93,7 +93,7 @@ static uint64_t explicit_list_search(uint32_t free_blocksize) {
   return NIL;
 }
 
-static void explicit_list_insert(uint32_t free_header) {
+void explicit_list_insert(uint32_t free_header) {
   assert(get_firstblock() <= free_header && free_header <= get_lastblock());
   assert(free_header % 8 == 4);
   assert(get_blocksize(free_header) >= MIN_EXPLICT_FREE_LIST_BLOCKSIZE);
@@ -102,7 +102,7 @@ static void explicit_list_insert(uint32_t free_header) {
   linkedlist_internal_insert(&explicit_list, &i_free_block, free_header);
 }
 
-static void explicit_list_delete(uint64_t free_header) {
+void explicit_list_delete(uint64_t free_header) {
   assert(get_firstblock() <= free_header && free_header <= get_lastblock());
   assert(free_header % 8 == 4);
   assert(get_blocksize(free_header) >= MIN_EXPLICT_FREE_LIST_BLOCKSIZE);
