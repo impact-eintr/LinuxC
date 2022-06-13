@@ -6,7 +6,6 @@
 #include "../headers/allocator.h"
 #include "../headers/algorithm.h"
 
-#define IMPLICIT_FREE_LIST
 #define MIN_IMPLICIT_FREE_LIST_BLOCKSIZE (8)
 
 // Manage small blocks

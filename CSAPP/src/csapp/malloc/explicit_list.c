@@ -6,8 +6,6 @@
 #include "../headers/allocator.h"
 #include "../headers/algorithm.h"
 
-#define EXPLICIT_FREE_LIST
-
 // Manage small blocks
 extern linkedlist_internal_t small_list;
 void small_list_init();
