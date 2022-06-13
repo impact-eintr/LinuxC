@@ -19,7 +19,6 @@ void small_list_check_free_blocks();
 int implicit_list_initialize_free_block() {
   // init small block list
   small_list_init();
-  printf("init finished\n");
   return 1;
 }
 

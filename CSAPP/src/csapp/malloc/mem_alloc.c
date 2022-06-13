@@ -26,7 +26,10 @@ uint32_t extend_heap(uint32_t size) {
   set_blocksize(epilogue, 0);
   return size;
 }
-#define IMPLICIT_FREE_LIST
+
+//#define IMPLICIT_FREE_LIST
+#define EXPLICIT_FREE_LIST
+//#define REDBLACK_TREE
 
 // Free Block Mamagement Implemented
 #ifdef IMPLICIT_FREE_LIST

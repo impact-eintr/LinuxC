@@ -421,7 +421,7 @@ uint64_t get_field32_block_ptr(uint64_t header_vaddr, uint32_t min_blocksize, ui
   assert(offset % 4 == 0);
 
   uint32_t vaddr_32 = *(uint32_t *)&heap[header_vaddr + offset];
-  return vaddr_32;
+  return (uint64_t)vaddr_32;
 }
 
 void set_field32_block_ptr(uint64_t header_vaddr, uint64_t block_ptr, uint32_t min_blocksize, uint32_t offset) {
@@ -439,6 +439,6 @@ void set_field32_block_ptr(uint64_t header_vaddr, uint64_t block_ptr, uint32_t m
   assert(offset % 4 == 0);
 
   // actually a 32-bits pointer
-  assert((block_ptr >> 0) == 0);
+  assert((block_ptr >> 32) == 0);
   *(uint32_t *)&heap[header_vaddr + offset] = (uint32_t)(block_ptr & 0xFFFFFFFF);
 }
