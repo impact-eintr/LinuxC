@@ -475,7 +475,7 @@ int func() {
 
 // function (bind, type, section index)
 extern void f1(); // global, notype, undefined
-extern void f2() {} // flobal, func, .text
+extern void f2() {} // global, func, .text
 
 void f3(); // global, notype, undefined
 void f4() {} // global, func, .text
@@ -487,7 +487,7 @@ __attribute__((weak)) extern void f6() {} // weak, func, .text
 __attribute__((weak)) void f7(); // weak, notype, undefined
 __attribute__((weak)) void f8() {} // weak, func, .text
 
-static void f9(); // waring: 'f9' used bu never define # global, notype, undefined
+static void f9(); // waring: 'f9' used but never define # global, notype, undefined
 static void fa() {} // local, func, .text
 
 void g() {
@@ -870,7 +870,12 @@ _
 > vm_area_struct 用于swap out/in 构建反向映射 然后更新 page table entry(present)
 
 ![img](img/virtual memory system.png)
-## 0x1D
+
+## 0x1D 硬件加速
+Translation Lookaside Buffer —— virtual memory to physical memory cache
+
+为 MMU 加速
+
 
 ## 0x1E
 
