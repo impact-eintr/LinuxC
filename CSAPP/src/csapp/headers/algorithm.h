@@ -135,7 +135,7 @@ linkedlist_node_t *linkedlist_next(linkedlist_t *list);
 /*      Red Black Tree                  */
 /*======================================*/
 typedef enum {
-  COLOR_BLOCK,
+  COLOR_BLACK,
   COLOR_RED,
 } rb_color_t;
 
