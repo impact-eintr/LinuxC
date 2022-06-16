@@ -85,12 +85,12 @@ void bst_internal_replace(uint64_t victim, uint64_t node,
   } else {
     // victim has parent
     uint64_t v_parent_left = i_node->get_leftchild(v_parent);
-    uint64_t v_aprent_right = i_node->get_rightchild(v_parent);
+    uint64_t v_parent_right = i_node->get_rightchild(v_parent);
 
     if (i_node->compare_nodes(v_parent_left, victim) == 0) {
       bst_internal_setchild(v_parent, node, LEFT_CHILD, i_node);
       return;
-    } else if (i_node->compare_nodes(victim, v_aprent_right) == 0) {
+    } else if (i_node->compare_nodes(victim, v_parent_right) == 0) {
       bst_internal_setchild(v_parent, node, RIGHT_CHILD, i_node);
       return;
     } else {
@@ -151,7 +151,135 @@ void bst_internal_insert(rbtree_internal_t *tree, rbtree_node_interface *i_node,
 
 void bst_internal_delete(rbtree_internal_t *tree, rbtree_node_interface *i_node,
                          uint64_t node_id, int is_rbt, uint64_t *db_parent) {
+  *db_parent = NULL_ID;
+  if (tree == NULL) {
+    return;
+  }
+  assert(tree->update_root != NULL);
+  rbt_validate_interface(i_node, IRBT_CHECKNULL | IRBT_PARENT | IRBT_RIGHT |
+                                     IRBT_LEFT | IRBT_COLOR | IRBT_KEY);
 
+  if (i_node->is_null_node(tree->root) == 1) {
+    // nothing to delete
+    return;
+  }
+  if (i_node->is_null_node(node_id) == 1) {
+    // delete a null
+    return;
+  }
+
+  uint64_t x = node_id;
+  uint64_t x_left = i_node->get_leftchild(x);
+  uint64_t x_right = i_node->get_rightchild(x);
+  int is_x_left_null = i_node->is_null_node(x_left);
+  int is_x_right_null = i_node->is_null_node(x_right);
+
+  if (is_x_left_null == 1 && is_x_right_null == 1) {
+    // case 1: left node: (x,#,#)
+    if (is_rbt == 1) {
+      rb_color_t x_color = i_node->get_color(x);
+      if (x_color == COLOR_BLACK) {
+        // TODO
+        *db_parent = i_node->get_parent(x);
+      }
+    }
+    bst_internal_replace(x, NULL_ID, tree, i_node);
+    return;
+
+  } else if (is_x_left_null == 1 || is_x_right_null == 1) {
+    // case 2: only one null child
+    // (x,y,#) or (x,#,y)
+    if (is_rbt == 1) {
+      assert(i_node->get_color(x) == COLOR_BLACK);
+    }
+    // the only non-null sub-tree
+    uint64_t y = NULL_ID;
+    if (is_x_left_null == 0) {
+      y = x_left;
+    } else if (is_x_right_null == 0) {
+      y = x_right;
+    } else {
+      assert(0);
+    }
+
+    if (is_rbt == 1) {
+      // TODO
+      assert(i_node->get_color(y) == COLOR_RED);
+      assert(i_node->is_null_node(i_node->get_leftchild(y)) == 1);
+      assert(i_node->is_null_node(i_node->get_rightchild(y)) == 1);
+      i_node->set_color(y, COLOR_BLACK);
+    }
+    bst_internal_replace(x, y, tree, i_node);
+    return;
+
+  } else {
+    // case 3: no null child: (x,A,B)
+    // check the n->right->left.
+    //         X                 B
+    //       /   \             /   \
+    //      A     B      =>   A     X
+    //          /   \             /   \
+    //         #     C           #     C
+    uint64_t x_right_left = i_node->get_leftchild(x);
+    int is_x_right_left_null = i_node->is_null_node(x_right_left);
+
+    // successor
+    uint64_t s = x_right;
+
+    // swap the position: x and successor
+    if (is_x_right_left_null == 1) {
+      // 3.1 x.right is the successor
+      i_node->set_rightchild(x, NULL_ID);
+      i_node->set_parent(s, NULL_ID);
+      bst_internal_replace(x, s, tree, i_node);
+
+      bst_internal_setchild(s, x_left, LEFT_CHILD, i_node);
+      bst_internal_setchild(x, i_node->get_rightchild(s), RIGHT_CHILD, i_node);
+      bst_internal_setchild(x, NULL_ID, LEFT_CHILD, i_node);
+      bst_internal_setchild(s, x, RIGHT_CHILD, i_node);
+    } else {
+      // 3.2 x.right.left...left is the successor
+      //         X                   Ln
+      //       /   \               /   \
+      //      A     B      =>     A     B
+      //          /   \               /   \
+      //         L1    R1            L1    R1
+      //        /   \               /   \
+      //       Ln    Rn            X    Rn
+      //     /   \               /   \
+      //    #     Rn+1          #     Rn-1
+      s = x_right;
+      uint64_t s_left = i_node->get_leftchild(s);
+      while (i_node->is_null_node(s_left) == 0) {
+        s = s_left;
+        s_left = i_node->get_leftchild(s);
+      }
+      uint64_t s_parent = i_node->get_parent(s);
+      assert(i_node->is_null_node(s_parent) == 0); // must be not null
+
+      // swap
+      bst_internal_setchild(x, i_node->get_rightchild(s), RIGHT_CHILD, i_node);
+      bst_internal_setchild(x, NULL_ID, LEFT_CHILD, i_node);
+      bst_internal_setchild(s, x_left, LEFT_CHILD, i_node);
+      bst_internal_setchild(s, x_right, RIGHT_CHILD, i_node);
+
+      bst_internal_replace(x, s, tree, i_node);
+      bst_internal_setchild(s_parent, x, LEFT_CHILD, i_node);
+    }
+
+    if (is_rbt == 1) {
+      // TODO
+      rb_color_t x_color = i_node->get_color(x);
+      i_node->set_color(x, i_node->get_color(s));
+      i_node->set_color(s, x_color);
+    }
+    // NOTE : switch to case 1 and case 2, we will delete X in case1/2
+    assert(i_node->is_null_node(x) == 0);
+    assert(i_node->is_null_node(i_node->get_leftchild(x)) == 1);
+    bst_internal_delete(tree, i_node, x, is_rbt, db_parent);
+
+    return;
+  }
 }
 
 uint64_t bst_internal_find(rbtree_internal_t *tree,
@@ -251,7 +379,7 @@ void bst_internal_prinf(uint64_t node, rbtree_node_interface *i_node) {
 void internal_tree_construct_keystr(rbtree_internal_t *tree,
                                     rbtree_node_interface *i_node, char *str) {}
 
-uint internal_tree_compare(uint64_t a, uint64_t b, rbtree_node_interface *i_node, int is_rbt) {
+int internal_tree_compare(uint64_t a, uint64_t b, rbtree_node_interface *i_node, int is_rbt) {
 
 }
 
@@ -266,37 +394,132 @@ void rbt_internal_verify(rbtree_internal_t *tree, rbtree_node_interface *i_node,
 //         Default Implementation
 // =====================================
 //Implementation of BST node access
-static int is_null_node(uint64_t node_id) {}
+static int is_null_node(uint64_t node_id) {
+  if (node_id == NULL_ID) {
+    return 1;
+  }
+  return 0;
+}
 
-static uint64_t construct_node() {}
+static uint64_t construct_node() {
+  rb_node_t *node = malloc(sizeof(rb_node_t));
+  if (node != NULL) {
+    node->parent = NULL;
+    node->left = NULL;
+    node->right = NULL;
+    node->color = COLOR_BLACK;
+    node->key = 0;
+    node->value = 0;
 
-static int destruct_node(uint64_t node_id) {}
+    return (uint64_t)node;
+  }
+  return NULL_ID;
+}
 
-static int compare_nodes(uint64_t first, uint64_t second) {}
+static int destruct_node(uint64_t node_id) {
+  if (is_null_node(node_id) == 1) {
+    return 0;
+  }
+  rb_node_t *ptr = (rb_node_t *)node_id;
+  if (ptr != NULL) {
+    free(ptr);
+  }
+  return 1;
+}
 
-static uint64_t get_parent(uint64_t node_id) {}
+static int compare_nodes(uint64_t first, uint64_t second) {
+  return !(first == second);
+}
 
-static int set_parent(uint64_t node_id, uint64_t parent_id) {}
+static uint64_t get_parent(uint64_t node_id) {
+  if (is_null_node(node_id) == 1) {
+    return NULL_ID;
+  }
+  return (uint64_t)(((rb_node_t *)node_id)->parent);
+}
 
-static uint64_t get_leftchild(uint64_t node_id) {}
+static int set_parent(uint64_t node_id, uint64_t parent_id) {
+  if (is_null_node(node_id) == 1) {
+    return 0;
+  }
+  *(uint64_t *)&(((rb_node_t *)node_id)->parent) = parent_id;
+  return 1;
+}
 
-static int set_leftchild(uint64_t node_id, uint64_t left_id) {}
+static uint64_t get_leftchild(uint64_t node_id) {
+  if (is_null_node(node_id) == 1) {
+    return NULL_ID;
+  }
+  return (uint64_t)(((rb_node_t *)node_id)->left);
+}
 
-static uint64_t get_rightchild(uint64_t node_id) {}
+static int set_leftchild(uint64_t node_id, uint64_t left_id) {
+  if (is_null_node(node_id) == 1) {
+    return 0;
+  }
+  *(uint64_t *)&(((rb_node_t *)node_id)->left) = left_id;
+  return 1;
+}
 
-static int set_rightchild(uint64_t node_id, uint64_t right_id) {}
+static uint64_t get_rightchild(uint64_t node_id) {
+  if (is_null_node(node_id) == 1) {
+    return NULL_ID;
+  }
+  return (uint64_t)(((rb_node_t *)node_id)->right);
+}
 
-static rb_color_t get_color(uint64_t node_id) {}
+static int set_rightchild(uint64_t node_id, uint64_t right_id) {
+  if (is_null_node(node_id) == 1) {
+    return 0;
+  }
+  *(uint64_t *)&(((rb_node_t *)node_id)->right) = right_id;
+  return 1;
+}
 
-static int set_color(uint64_t node_id, rb_color_t color) {}
+static rb_color_t get_color(uint64_t node_id) {
+  if (is_null_node(node_id) == 1) {
+    return NULL_ID;
+  }
+  return ((rb_node_t *)node_id)->color;
+}
 
-static uint64_t get_key(uint64_t node_id) {}
+static int set_color(uint64_t node_id, rb_color_t color) {
+  if (is_null_node(node_id) == 1) {
+    return 0;
+  }
+  ((rb_node_t *)node_id)->color = color;
+  return 1;
+}
 
-static int set_key(uint64_t node_id, uint64_t key) {}
+static uint64_t get_key(uint64_t node_id) {
+  if (is_null_node(node_id) == 1) {
+    return NULL_ID;
+  }
+  return ((rb_node_t *)node_id)->key;
+}
 
-static uint64_t get_value(uint64_t node_id) {}
+static int set_key(uint64_t node_id, uint64_t key) {
+  if (is_null_node(node_id) == 1) {
+    return 0;
+  }
+  ((rb_node_t *)node_id)->key = key;
+  return 1;
+}
 
-static int set_value(uint64_t node_id, uint64_t value) {}
+static uint64_t get_value(uint64_t node_id) {
+  if (is_null_node(node_id) == 1) {
+    return NULL_ID;
+  }
+  return ((rb_node_t *)node_id)->value;
+}
+
+static int set_value(uint64_t node_id, uint64_t value) {
+  if (is_null_node(node_id) == 1) {
+    return 0;
+  }
+  ((rb_node_t *)node_id)->value = value;
+  return 1;
+}
 
 // shared with red-black tree
 rbtree_node_interface default_i_rbt_node = {
@@ -319,7 +542,13 @@ rbtree_node_interface default_i_rbt_node = {
 };
 
 // child class of base class
-static int update_root(rbtree_internal_t *this, uint64_t new_root) {}
+static int update_root(rbtree_internal_t *this, uint64_t new_root) {
+  if (this == NULL) {
+    return 0;
+  }
+  this->root = new_root;
+  return 1;
+}
 
 // ----------------------------
 //  The exposed interfaces
