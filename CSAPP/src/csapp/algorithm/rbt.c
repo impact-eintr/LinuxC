@@ -106,7 +106,63 @@ static uint64_t rbt_internal_rotate(int64_t n, uint64_t p, uint64_t g,
 }
 
 void rbt_internal_insert(rbtree_internal_t *tree, rbtree_node_interface *i_node,
-                         uint64_t node_id) {}
+                         uint64_t node_id) {
+  if (tree == NULL) {
+    return;
+  }
+  assert(tree->update_root != NULL);
+  rbt_validate_interface(i_node, IRBT_CHECKNULL | IRBT_COMPARE | IRBT_PARENT |
+                                     IRBT_LEFT | IRBT_RIGHT | IRBT_COLOR | IRBT_KEY);
+  assert(i_node->is_null_node(node_id));
+
+  uint64_t x = node_id;
+
+  // set the inserted nod as red node
+  i_node->set_color(x, COLOR_RED);
+  i_node->set_parent(x, NULL_ID);
+  i_node->set_leftchild(x, NULL_ID);
+  i_node->set_rightchild(x, NULL_ID);
+
+  // if tree is empry, x would be insert as BLACK node
+  bst_internal_insert(tree, i_node, x);
+
+  uint64_t n = x;
+  // float up RBT
+  while (1) {
+    rb_color_t n_color = i_node->get_color(n);
+    uint64_t p = i_node->get_parent(p);
+    if (i_node->is_null_node(p) == 0) {
+      rb_color_t p_color = i_node->get_color(p);
+
+      assert(n_color == COLOR_RED);
+      if (i_node->is_null_node(p) == 0) {
+        // end of floating up
+        return;
+      } else {
+        // p is red && n is red
+        uint64_t g = i_node->get_parent(p);
+        assert(i_node->is_null_node(g) == 0);
+        assert(i_node->get_color(g) == COLOR_BLACK);
+
+        // rotate
+        uint64_t r_root = rbt_internal_rotate(n, p, g, tree, i_node);
+
+        // recolor
+        i_node->set_color(g, COLOR_BLACK);
+        i_node->set_color(p, COLOR_BLACK);
+        i_node->set_color(n, COLOR_BLACK);
+        i_node->set_color(r_root,COLOR_RED);
+
+        n = r_root;
+        continue;
+      }
+    } else {
+      // n should be the root of the tree
+      i_node->set_color(n, COLOR_BLACK);
+      return;
+    }
+  }
+}
 
 static void rbt_get_psnf(rbtree_internal_t *tree, rbtree_node_interface *i_node,
                          uint64_t db, uint64_t *p, uint64_t *s, uint64_t *n,
