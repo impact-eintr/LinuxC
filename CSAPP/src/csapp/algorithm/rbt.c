@@ -9,7 +9,7 @@
 
 // shard with BST
 rbtree_node_interface default_i_rbt_node;
-rb_tree_t *bs_construct_keystr(char *str);
+rb_tree_t *bst_construct_keystr(char *str);
 int internal_tree_compare(uint64_t a, uint64_t b, rbtree_node_interface *i_node,
                           int is_rbt);
 void bst_internal_setchild(uint64_t parent, uint64_t child, child_t direction,
@@ -117,7 +117,7 @@ void rbt_internal_insert(rbtree_internal_t *tree, rbtree_node_interface *i_node,
 
   uint64_t x = node_id;
 
-  // set the inserted nod as red node
+  // set the inserted node as red node
   i_node->set_color(x, COLOR_RED);
   i_node->set_parent(x, NULL_ID);
   i_node->set_leftchild(x, NULL_ID);
@@ -166,14 +166,130 @@ void rbt_internal_insert(rbtree_internal_t *tree, rbtree_node_interface *i_node,
 
 static void rbt_get_psnf(rbtree_internal_t *tree, rbtree_node_interface *i_node,
                          uint64_t db, uint64_t *p, uint64_t *s, uint64_t *n,
-                         uint64_t *f) {}
+                         uint64_t *f) {
+  // db    bouble black node
+  // p     parent of db
+  // s     sibling of db
+  // n the child of s.this child is near to db
+  // f the child of s.this child is far away from db
+  if (i_node->is_null_node(db) == 1) {
+    if (i_node->is_null_node(*p) == 1) {
+      return;
+    }
+  } else {
+    *p = i_node->get_parent(db);
+  }
+
+  if (*p == NULL_ID) {
+    assert(i_node->is_null_node(db) == 0);
+    assert(i_node->compare_nodes(db, tree->root) == 0);
+    return;
+  }
+
+  uint64_t p_left = i_node->get_leftchild(*p);
+  uint64_t p_right = i_node->get_rightchild(*p);
+  child_t p_db = LEFT_CHILD;
+
+  if (i_node->compare_nodes(db, p_left) == 0) {
+    *s = p_right;
+    p_db = LEFT_CHILD;
+  } else {
+    assert(i_node->compare_nodes(db, p_right) == 0);
+    *s = p_left;
+    p_db = RIGHT_CHILD;
+  }
+
+  assert(i_node->is_null_node(*s) == 0);
+  uint64_t s_left = i_node->get_leftchild(*s);
+  uint64_t s_right = i_node->get_rightchild(*s);
+  if (p_db == LEFT_CHILD) {
+    *n = s_left;
+    *f = s_right;
+  } else {
+    *n = s_right;
+    *f = s_left;
+  }
+}
 
 void rbt_internal_delete(rbtree_internal_t *tree, rbtree_node_interface *i_node,
-                         uint64_t node_id) {}
+                         uint64_t node_id) {
+  // db start from NULL
+  uint64_t db = NULL_ID;
+  uint64_t p;
+  uint64_t s;
+  uint64_t n;
+  uint64_t f;
+
+  // this method will check tree and i_node
+  bst_internal_delete(tree, i_node, node_id, 1, &p);
+
+  // db can be root, then p is null
+  // no action would be taken for root double black
+  // it will automaticlly turn to single black
+  if (i_node->is_null_node(p) == 1) {
+    return;
+  }
+
+  // rebalance the double black node
+  while (i_node->compare_nodes(db, tree->root) != 0) {
+    // to start up, db = NULL, p is effective
+    // so the calculation will be on p instead of db
+    rbt_get_psnf(tree, i_node, db, &p, &s, &n, &f);
+
+    rb_color_t p_color = i_node->get_color(p);
+    rb_color_t s_color = i_node->get_color(s);
+    rb_color_t n_color = i_node->get_color(n);
+    rb_color_t f_color = i_node->get_color(f);
+
+    int psnf_color = ((!p_color) << 3) | ((!s_color) << 2) | ((!n_color) << 1) | (!f_color);
+
+    switch (psnf_color) {
+      case 0xF:
+        // parent, sibling, sibling's child are all black nodes
+        db = p;
+        i_node->set_color(s, COLOR_RED);
+        continue;
+      case 0xB:
+        rbt_internal_rotate(f, s, p, tree, i_node);
+        i_node->set_color(s, COLOR_BLACK);
+        i_node->set_color(p, COLOR_RED);
+        continue;
+      case 0x7:
+        i_node->set_color(p, COLOR_BLACK);
+        i_node->set_color(s, COLOR_RED);
+      case 0x4:
+      case 0x5:
+      case 0xC:
+      case 0xD:
+        // n is red
+        rbt_internal_rotate(n, s, p, tree, i_node);
+        i_node->set_color(p, COLOR_BLACK);
+        i_node->set_color(s, COLOR_BLACK);
+        i_node->set_color(n, p_color);
+        break;
+      case 0x6:
+      case 0xE:
+        // n is black
+        rbt_internal_rotate(f, s, p, tree, i_node);
+        i_node->set_color(p, COLOR_BLACK);
+        i_node->set_color(s, p_color);
+        i_node->set_color(f, COLOR_BLACK);
+        break;
+      default:
+        assert(0);
+        break;
+      }
+    break;
+  }
+}
 
 // =======================================
 //         Defaut Implementation
 // =======================================
+
+rb_tree_t *rbt_construct() {
+  return bst_construct();
+}
 
 // build binary tree
 static int color_tree_dfs(rb_node_t *n, char *color, int index) {
@@ -193,24 +309,75 @@ static int color_tree_dfs(rb_node_t *n, char *color, int index) {
   return index;
 }
 
-rb_tree_t *rbt_construct_keystr(char *tree, char *color) {}
+rb_tree_t *rbt_construct_keystr(char *tree, char *color) {
+  rb_tree_t *t = bst_construct_keystr(tree);
+  if (t == NULL) {
+    return NULL;
+  }
 
-void rbt_free(rb_tree_t *tree) {}
+  uint64_t root_id = t->root;
+  if (default_i_rbt_node.is_null_node(root_id) == 1) {
+    return t;
+  }
 
-void rbt_add(rb_tree_t *tree, uint64_t key) {}
+  // root is not NULL
+  // color the red-black tree
+  rb_node_t *root_ptr = (rb_node_t *)root_id;
+  int index = color_tree_dfs(root_ptr, color, 0);
+  assert(index == strlen(color) - 1);
 
-void rbt_insert(rb_tree_t *tree, rb_node_t *node) {}
+  return t;
+}
 
-void rbt_remove(rb_tree_t *tree, uint64_t key) {}
+void rbt_free(rb_tree_t *tree) {
+  bst_free(tree);
+}
 
-void rbt_delete(rb_tree_t *tree, rb_node_t *node) {}
+void rbt_add(rb_tree_t *tree, uint64_t key) {
+  rb_node_t *n = (rb_node_t *)default_i_rbt_node.construct_node();
+  n->key = key;
 
-rb_node_t *rbt_find(rb_tree_t *tree, uint64_t key) {}
+  rbt_insert(tree, n);
+}
 
-rb_node_t *rbt_find_succ(rb_tree_t *tree, uint64_t key) {}
+void rbt_insert(rb_tree_t *tree, rb_node_t *node) {
+  rbt_internal_insert(&(tree->base), &default_i_rbt_node, (uint64_t)node);
+}
 
-int rbt_compare(rb_tree_t *a, rb_tree_t *b) {}
+void rbt_remove(rb_tree_t *tree, uint64_t key) {
+  rb_node_t *node = rbt_find(tree, key);
+  if (node == NULL) {
+    return;
+  }
+  rbt_delete(tree, node);
+}
 
-void rbt_rotate(rb_node_t *n, rb_node_t *p, rb_node_t *g, rb_tree_t *tree) {}
+void rbt_delete(rb_tree_t *tree, rb_node_t *node) {
+  rbt_internal_delete(&(tree->base), &default_i_rbt_node, (uint64_t)node);
+}
 
-void rbt_verify(rb_tree_t *tree) {}
+rb_node_t *rbt_find(rb_tree_t *tree, uint64_t key) {
+  return bst_find(tree, key);
+}
+
+rb_node_t *rbt_find_succ(rb_tree_t *tree, uint64_t key) {
+  return bst_find_succ(tree, key);
+}
+
+int rbt_compare(rb_tree_t *a, rb_tree_t *b) {
+  if (a == NULL && b == NULL) {
+    return 1;
+  }
+  if (a == NULL || b == NULL) {
+    return 0;
+  }
+  return internal_tree_compare(a->root, b->root, &default_i_rbt_node, 1);
+}
+
+void rbt_rotate(rb_node_t *n, rb_node_t *p, rb_node_t *g, rb_tree_t *tree) {
+  rbt_internal_rotate((uint64_t)n, (uint64_t)p, (uint64_t)g, &(tree->base), &default_i_rbt_node);
+}
+
+void rbt_verify(rb_tree_t *tree) {
+  rbt_internal_verify(&(tree->base), &default_i_rbt_node, 1);
+}

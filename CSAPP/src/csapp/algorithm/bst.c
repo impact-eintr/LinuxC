@@ -179,7 +179,10 @@ void bst_internal_delete(rbtree_internal_t *tree, rbtree_node_interface *i_node,
     if (is_rbt == 1) {
       rb_color_t x_color = i_node->get_color(x);
       if (x_color == COLOR_BLACK) {
-        // TODO
+        // null is double black
+        // report double black node to RBT
+        // may report NULL to RBT delete
+        // then x is the root node, no db rebalancing
         *db_parent = i_node->get_parent(x);
       }
     }
@@ -203,7 +206,7 @@ void bst_internal_delete(rbtree_internal_t *tree, rbtree_node_interface *i_node,
     }
 
     if (is_rbt == 1) {
-      // TODO
+      // left child should be the red leaf node
       assert(i_node->get_color(y) == COLOR_RED);
       assert(i_node->is_null_node(i_node->get_leftchild(y)) == 1);
       assert(i_node->is_null_node(i_node->get_rightchild(y)) == 1);
@@ -268,7 +271,7 @@ void bst_internal_delete(rbtree_internal_t *tree, rbtree_node_interface *i_node,
     }
 
     if (is_rbt == 1) {
-      // TODO
+      // swap node and successor color
       rb_color_t x_color = i_node->get_color(x);
       i_node->set_color(x, i_node->get_color(s));
       i_node->set_color(s, x_color);
@@ -376,19 +379,17 @@ void bst_internal_prinf(uint64_t node, rbtree_node_interface *i_node) {
 // -------------------------------------
 //       For Unit Test
 // -------------------------------------
-void internal_tree_construct_keystr(rbtree_internal_t *tree,
-                                    rbtree_node_interface *i_node, char *str) {}
-
-int internal_tree_compare(uint64_t a, uint64_t b, rbtree_node_interface *i_node, int is_rbt) {
-
-}
-
-static void rbt_verify_dfs(uint64_t p, uint64_t *black_height,
-                           uint64_t *key_min, uint64_t *key_max,
-                           rbtree_node_interface *i_node, int is_rbt) {}
-
-void rbt_internal_verify(rbtree_internal_t *tree, rbtree_node_interface *i_node,
-                         int is_rbt) {}
+//void internal_tree_construct_keystr(rbtree_internal_t *tree,
+//                                    rbtree_node_interface *i_node, char *str) {}
+//
+//int internal_tree_compare(uint64_t a, uint64_t b, rbtree_node_interface *i_node, int is_rbt) {}
+//
+//static void rbt_verify_dfs(uint64_t p, uint64_t *black_height,
+//                           uint64_t *key_min, uint64_t *key_max,
+//                           rbtree_node_interface *i_node, int is_rbt) {}
+//
+//void rbt_internal_verify(rbtree_internal_t *tree, rbtree_node_interface *i_node,
+//                         int is_rbt) {}
 
 // =====================================
 //         Default Implementation
@@ -555,29 +556,29 @@ static int update_root(rbtree_internal_t *this, uint64_t new_root) {
 // ----------------------------
 
 // constructor and destructor
-rb_tree_t *bst_construct() {}
-
-// for test use
-rb_tree_t *bst_construct_keystr(char *str) {}
-
-void bst_print(rb_node_t *node) {}
-
-static void bst_destruct_subtree(uint64_t root) {}
-
-void bst_free(rb_tree_t *tree) {}
-
-void bst_add(rb_tree_t *tree, uint64_t key) {}
-
-void bst_insert(rb_tree_t *tree, rb_node_t *node) {}
-
-void bst_remove(rb_tree_t *tree, uint64_t key) {}
-
-void bst_delete(rb_tree_t *tree, rb_node_t *node) {}
-
-rb_node_t *bst_find(rb_tree_t *tree, uint64_t key) {}
-
-rb_node_t *bst_find_succ(rb_tree_t *tree, uint64_t key) {}
-
-int bst_compare(rb_tree_t *a, rb_tree_t *b) {}
-
-void bst_validate(rb_tree_t *tree) {}
+//rb_tree_t *bst_construct() {}
+//
+//// for test use
+//rb_tree_t *bst_construct_keystr(char *str) {}
+//
+//void bst_print(rb_node_t *node) {}
+//
+//static void bst_destruct_subtree(uint64_t root) {}
+//
+//void bst_free(rb_tree_t *tree) {}
+//
+//void bst_add(rb_tree_t *tree, uint64_t key) {}
+//
+//void bst_insert(rb_tree_t *tree, rb_node_t *node) {}
+//
+//void bst_remove(rb_tree_t *tree, uint64_t key) {}
+//
+//void bst_delete(rb_tree_t *tree, rb_node_t *node) {}
+//
+//rb_node_t *bst_find(rb_tree_t *tree, uint64_t key) {}
+//
+//rb_node_t *bst_find_succ(rb_tree_t *tree, uint64_t key) {}
+//
+//int bst_compare(rb_tree_t *a, rb_tree_t *b) {}
+//
+//void bst_validate(rb_tree_t *tree) {}
