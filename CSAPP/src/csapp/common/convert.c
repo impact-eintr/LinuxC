@@ -25,6 +25,7 @@ string2uint_state_t string2uint_next(string2uint_state_t state, char c,
       return STRING2UINT_LEADING_SPACE; // 占位符
     }
     return STRING2UINT_FAILED;
+
   case STRING2UINT_FIRST_ZERO:
     // check zero
     if ('0' <= c && c <= '9') {
@@ -38,6 +39,7 @@ string2uint_state_t string2uint_next(string2uint_state_t state, char c,
       return STRING2UINT_LEADING_SPACE; // 占位符
     }
     return STRING2UINT_FAILED;
+
   case STRING2UINT_POSITIVE_DEC:
     // dec number
     // signed or unsigned
@@ -50,6 +52,7 @@ string2uint_state_t string2uint_next(string2uint_state_t state, char c,
       return STRING2UINT_ENDING_SPACE;
     }
     return STRING2UINT_FAILED;
+
   case STRING2UINT_POSITIVE_HEX:
     // hex number
     if ('0' <= c && c <= '9') {
@@ -65,63 +68,68 @@ string2uint_state_t string2uint_next(string2uint_state_t state, char c,
       return STRING2UINT_ENDING_SPACE;
     }
     return STRING2UINT_FAILED;
-    case STRING2UINT_NEGATIVE:
-      // negative
-      // set the bit map of the negative value till now
-      if ('1' <= c && c <= '9') {
-        *bmap = 1 + ~(c - '0');
-        return STRING2UINT_NEGATIVE_DEC;
-      } else if (c == '0') {
-        *bmap = 0;
-        return STRING2UINT_NEGATIVE_FIRST_ZERO;
-      }
-      return STRING2UINT_FAILED;
-    case STRING2UINT_NEGATIVE_FIRST_ZERO:
-      // check zero
-      if ('0' <= c && c <= '9') {
-        // no overflow here
-        *bmap = 1 + ~(c - '0');
-        return STRING2UINT_NEGATIVE_DEC;
-      } else if (c == 'x' || c == 'X') {
-        return STRING2UINT_NEGATIVE_HEX;
-      } else if (c == ' ') {
-        // zero only
-        assert(*bmap == 0);
-        return STRING2UINT_ENDING_SPACE;
-      }
-      return STRING2UINT_FAILED;
-    case STRING2UINT_NEGATIVE_DEC:
-      // dec number
-      if ('0' <= c && c <= '9') {
-        *bmap = (*bmap << 1) + (*bmap << 3) + 1 + ~(c - '0');
-        return STRING2UINT_NEGATIVE_DEC;
-      } else if (c == ' ') {
-        return STRING2UINT_ENDING_SPACE;
-      }
-      return STRING2UINT_FAILED;
-    case STRING2UINT_NEGATIVE_HEX:
-      // hex number
-      if ('0' <= c && c <= '9') {
-        *bmap = ((*bmap) << 4) + 1 + ~(c - '0');
-        return STRING2UINT_NEGATIVE_HEX;
-      } else if ('a' <= c && c <= 'f') {
-        *bmap = ((*bmap) << 4) + 1 + ~(c - 'a' + 10);
-        return STRING2UINT_NEGATIVE_HEX;
-      } else if ('A' <= c && c <= 'F') {
-        *bmap = ((*bmap) << 4) + 1 + ~(c - 'A' + 10);
-        return STRING2UINT_NEGATIVE_HEX;
-      } else if (c == ' ' || c == '\t' || c == '\r' || c == '\n') {
-        return STRING2UINT_ENDING_SPACE;
-      }
 
-      return STRING2UINT_FAILED;
-    case STRING2UINT_ENDING_SPACE:
-      if (c == ' ' || c == '\t' || c == 'r' || c == '\n') {
-        return STRING2UINT_LEADING_SPACE;
-      }
-      return STRING2UINT_FAILED;
-    case STRING2UINT_FAILED:
-      return STRING2UINT_FAILED;
+  case STRING2UINT_NEGATIVE:
+    // negative
+    // set the bit map of the negative value till now
+    if ('1' <= c && c <= '9') {
+      *bmap = 1 + ~(c - '0');
+      return STRING2UINT_NEGATIVE_DEC;
+    } else if (c == '0') {
+      *bmap = 0;
+      return STRING2UINT_NEGATIVE_FIRST_ZERO;
+    }
+    return STRING2UINT_FAILED;
+
+  case STRING2UINT_NEGATIVE_FIRST_ZERO:
+    // check zero
+    if ('0' <= c && c <= '9') {
+      // no overflow here
+      *bmap = 1 + ~(c - '0');
+      return STRING2UINT_NEGATIVE_DEC;
+    } else if (c == 'x' || c == 'X') {
+      return STRING2UINT_NEGATIVE_HEX;
+    } else if (c == ' ') {
+      // zero only
+      assert(*bmap == 0);
+      return STRING2UINT_ENDING_SPACE;
+    }
+    return STRING2UINT_FAILED;
+
+  case STRING2UINT_NEGATIVE_DEC:
+    // dec number
+    if ('0' <= c && c <= '9') {
+      *bmap = (*bmap << 1) + (*bmap << 3) + 1 + ~(c - '0');
+      return STRING2UINT_NEGATIVE_DEC;
+    } else if (c == ' ') {
+      return STRING2UINT_ENDING_SPACE;
+    }
+    return STRING2UINT_FAILED;
+
+  case STRING2UINT_NEGATIVE_HEX:
+    // hex number
+    if ('0' <= c && c <= '9') {
+      *bmap = ((*bmap) << 4) + 1 + ~(c - '0');
+      return STRING2UINT_NEGATIVE_HEX;
+    } else if ('a' <= c && c <= 'f') {
+      *bmap = ((*bmap) << 4) + 1 + ~(c - 'a' + 10);
+      return STRING2UINT_NEGATIVE_HEX;
+    } else if ('A' <= c && c <= 'F') {
+      *bmap = ((*bmap) << 4) + 1 + ~(c - 'A' + 10);
+      return STRING2UINT_NEGATIVE_HEX;
+    } else if (c == ' ' || c == '\t' || c == '\r' || c == '\n') {
+      return STRING2UINT_ENDING_SPACE;
+    }
+    return STRING2UINT_FAILED;
+
+  case STRING2UINT_ENDING_SPACE:
+    if (c == ' ' || c == '\t' || c == 'r' || c == '\n') {
+      return STRING2UINT_LEADING_SPACE;
+    }
+    return STRING2UINT_FAILED;
+
+  case STRING2UINT_FAILED:
+    return STRING2UINT_FAILED;
   }
 }
 
@@ -131,7 +139,7 @@ uint64_t string2uint_range(const char *str, int start, int end) {
   uint64_t uv = 0;
   string2uint_state_t state = STRING2UINT_LEADING_SPACE;
 
-  for (int i = 0; i <= end; ++i) {
+  for (int i = start; i <= end; ++i) {
     char c = str[i];
     state = string2uint_next(state, c, &uv);
 
@@ -140,6 +148,7 @@ uint64_t string2uint_range(const char *str, int start, int end) {
 #ifdef DEBUG_STRING2UINT
       printf("string2uint: failed to transfer: %s\n", str);
 #endif
+      assert(0);
     default:
       break;
     }
@@ -172,11 +181,11 @@ uint32_t uint2float(uint32_t u) {
     a += u;
     // compute g, r, s
     uint32_t g =
-        (a >> (n - 23)) & 0x1; // Guard bit, the lowest bit of the result
+      (a >> (n - 23)) & 0x1; // Guard bit, the lowest bit of the result
     uint32_t r =
-        (a >> (n - 24)) & 0x1; // Round bit, the highest bit to be removed
+      (a >> (n - 24)) & 0x1; // Round bit, the highest bit to be removed
     uint32_t s =
-        0x0; // Sticky bit, the OR of remaining bits in the removed part (low)
+      0x0; // Sticky bit, the OR of remaining bits in the removed part (low)
     for (int j = 0; j < n - 24; ++j) {
       s = s | ((u >> j) & 0x1);
     }
@@ -185,19 +194,19 @@ uint32_t uint2float(uint32_t u) {
     // 0    1    ?    ... ?
     // [24] [23] [22] ... [0]
     /* Rounding Rules
-        +-------+-------+-------+-------+
-        |   G   |   R   |   S   |       |
-        +-------+-------+-------+-------+
-        |   0   |   0   |   0   |   +0  | round down
-        |   0   |   0   |   1   |   +0  | round down
-        |   0   |   1   |   0   |   +0  | round down
-        |   0   |   1   |   1   |   +1  | round up
-        |   1   |   0   |   0   |   +0  | round down
-        |   1   |   0   |   1   |   +0  | round down
-        |   1   |   1   |   0   |   +1  | round up
-        |   1   |   1   |   1   |   +1  | round up
-        +-------+-------+-------+-------+
-    carry = R & (G | S) by K-Map
+       +-------+-------+-------+-------+
+       |   G   |   R   |   S   |       |
+       +-------+-------+-------+-------+
+       |   0   |   0   |   0   |   +0  | round down
+       |   0   |   0   |   1   |   +0  | round down
+       |   0   |   1   |   0   |   +0  | round down
+       |   0   |   1   |   1   |   +1  | round up
+       |   1   |   0   |   0   |   +0  | round down
+       |   1   |   0   |   1   |   +0  | round down
+       |   1   |   1   |   0   |   +1  | round up
+       |   1   |   1   |   1   |   +1  | round up
+       +-------+-------+-------+-------+
+       carry = R & (G | S) by K-Map
     */
     if ((r & (g | s)) == 0x1) {
       a = a + 1;
