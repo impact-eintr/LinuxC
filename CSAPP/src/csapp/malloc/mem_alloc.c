@@ -340,7 +340,7 @@ int heap_init() {
   return 1;
 }
 
-#define DEBUG_MALLOC
+//#define DEBUG_MALLOC
 uint64_t mem_alloc(uint32_t size) {
   assert(0 < size && size < HEAP_MAX_SIZE - 4 - 8 - 4);
 
