@@ -8,7 +8,7 @@
 #include "../headers/algorithm.h"
 
 // shard with BST
-rbtree_node_interface default_i_rbt_node;
+extern rbtree_node_interface default_i_rbt_node;
 rb_tree_t *bst_construct_keystr(char *str);
 int internal_tree_compare(uint64_t a, uint64_t b, rbtree_node_interface *i_node,
                           int is_rbt);
@@ -53,7 +53,7 @@ static uint64_t rbt_internal_rotate(int64_t n, uint64_t p, uint64_t g,
       //   A     B
       bst_internal_replace(g, p, tree, i_node); // NOTE this function only change root->g to root->p !!!
       bst_internal_setchild(p, g, RIGHT_CHILD, i_node);
-      bst_internal_setchild(g, p_left, LEFT_CHILD, i_node);
+      bst_internal_setchild(g, p_right, LEFT_CHILD, i_node);
 
       return p;
     } else {
@@ -81,7 +81,7 @@ static uint64_t rbt_internal_rotate(int64_t n, uint64_t p, uint64_t g,
       //       n     D                   A   B C   D
       //     /   \
       //    B     C
-      bst_internal_replace(g, p, tree, i_node);
+      bst_internal_replace(g, n, tree, i_node);
       bst_internal_setchild(n, g, LEFT_CHILD, i_node);
       bst_internal_setchild(n, p, RIGHT_CHILD, i_node);
       bst_internal_setchild(g, n_left, RIGHT_CHILD, i_node);
@@ -113,7 +113,7 @@ void rbt_internal_insert(rbtree_internal_t *tree, rbtree_node_interface *i_node,
   assert(tree->update_root != NULL);
   rbt_validate_interface(i_node, IRBT_CHECKNULL | IRBT_COMPARE | IRBT_PARENT |
                                      IRBT_LEFT | IRBT_RIGHT | IRBT_COLOR | IRBT_KEY);
-  assert(i_node->is_null_node(node_id));
+  assert(i_node->is_null_node(node_id) == 0);
 
   uint64_t x = node_id;
 
@@ -126,16 +126,16 @@ void rbt_internal_insert(rbtree_internal_t *tree, rbtree_node_interface *i_node,
   // if tree is empry, x would be insert as BLACK node
   bst_internal_insert(tree, i_node, x);
 
-  uint64_t n = x;
+  uint64_t n = x; // node iterator
   // float up RBT
   while (1) {
     rb_color_t n_color = i_node->get_color(n);
-    uint64_t p = i_node->get_parent(p);
+    uint64_t p = i_node->get_parent(n);
     if (i_node->is_null_node(p) == 0) {
       rb_color_t p_color = i_node->get_color(p);
 
       assert(n_color == COLOR_RED);
-      if (i_node->is_null_node(p) == 0) {
+      if (p_color == COLOR_BLACK) {
         // end of floating up
         return;
       } else {
@@ -257,6 +257,7 @@ void rbt_internal_delete(rbtree_internal_t *tree, rbtree_node_interface *i_node,
       case 0x7:
         i_node->set_color(p, COLOR_BLACK);
         i_node->set_color(s, COLOR_RED);
+        break;
       case 0x4:
       case 0x5:
       case 0xC:
@@ -304,7 +305,7 @@ static int color_tree_dfs(rb_node_t *n, char *color, int index) {
     n->color = COLOR_BLACK;
   }
   index = color_tree_dfs(n->left, color, index + 1);
-  index = color_tree_dfs(n->left, color, index + 1);
+  index = color_tree_dfs(n->right, color, index + 1);
 
   return index;
 }
