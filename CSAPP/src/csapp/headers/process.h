@@ -6,10 +6,10 @@
 #include "cpu.h"
 #include "memory.h"
 
-#define LERNEL_STACK_SIZE (8192)
+#define KERNEL_STACK_SIZE (8192) // double page size
 
 typedef union KERNEL_STACK_STRUCT {
-  uint8_t stack[LERNEL_STACK_SIZE];
+  uint8_t stack[KERNEL_STACK_SIZE];
   struct {
     struct PROCESS_CONTROL_BLOCK_STRUCT *pcb;
   } threadinfo;

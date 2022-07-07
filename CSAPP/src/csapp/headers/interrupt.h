@@ -2,16 +2,26 @@
 #define INTERRUPT_H_
 
 #include <stdint.h>
+#include <stdlib.h>
+#include <setjmp.h>
+
+#include "cpu.h"
 
 #define KERNEL_malloc malloc
 
 typedef struct STRUCT_TRAPFRAME{
-  // TODO
+  // error code
+  uint64_t rip;
+  // CS: counter segment
+  // eflags
+  uint64_t rsp;
+  // SS: stacl segment
 } trapframe_t;;
 
 
 typedef struct STRUCT_USERFRAME {
-  // TODO
+  cpu_reg_t regs;
+  cpu_flags_t flags;
 } userframe_t;
 
 void idt_init();
@@ -22,5 +32,6 @@ void interrupt_return_stack_switching();
 uint64_t get_kstack_top_TSS();
 uint64_t get_kstack_RSP();
 
+extern jmp_buf USER_INSTRUCTION_ON_IRET;
 
 #endif // INTERRUPT_H_

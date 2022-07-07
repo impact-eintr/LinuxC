@@ -179,6 +179,17 @@ cpu_pc_t cpu_pc;
 
 
 // TSS
+// we only use stack0 of TSS
+// This information is stored in main memory
+typedef struct TSS_S0 {
+  uint64_t ESP0;
+  uint64_t SS0;
+} tss_s0_t;
+// TSS is store in DRAM
+// Intel thinks that each process can have ite own TSS
+// But we can use only one TSS globally
+// pointing to task-State Segment (in main memory) of the current process
+tss_s0_t tr_global_tss;
 
 // Control registers
 typedef struct {
