@@ -1,6 +1,13 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+
 #include "../../headers/cpu.h"
 #include "../../headers/memory.h"
 #include "../../headers/instruction.h"
+#include "../../headers/algorithm.h"
+#include "../../headers/interrupt.h"
 #include "../../headers/common.h"
 
 static inline void increase_pc() {
@@ -193,11 +200,50 @@ void int_handler(od_t *src_od, od_t *dst_od) {
     cpu_flags.__flags_value = 0;
 
     // This function will not return.
-    //interrupt_stack_switching(src_od->value);
+    interrupt_stack_switching(src_od->value);
   }
+}
+
+void nop_handler(od_t *src_od, od_t *dst_od) {
+  increase_pc();
 }
 
 // from inst.c
 void parse_instruction(char *inst_str, inst_t *inst);
 
-void instruction_cycle() {}
+// tiem, the craft of god
+static uint64_t global_time = 0;
+static uint64_t timer_period = 5;
+
+// instruction sycle is implement in cpu
+// the only exposed interface utside CPU
+void instruction_cycle() {
+  // this is the entry point of the re-execution of interrupt return instruction.
+  // When a new process is sheduled, the first instruction/return instruction
+  // should start here, jumping out of the call stack of old process,
+  // This is especially useful fot page fault handling.
+  setjmp(USER_INSTRUCTION_ON_IRET);
+
+  global_time += 1;
+  // FETCH: get the instruction string by program counter
+  char inst_str[MAX_INSTRUCTION_CHAR + 10];
+  uint64_t pc_pa = va2pa(cpu_pc.rip);
+  cpu_readinst_dram(pc_pa, inst_str);
+
+#ifdef DEBUG_INSTRUCTION_CYCLE
+  printf("%8lx       %s", cpu_pc.rip, inst_str);
+#endif
+
+  // DECODE: decode the run-time instruction operands
+  inst_t inst;
+  parse_instruction(inst_str, &inst);
+
+  // EXECUTE: get the funtion pointer of handler by the operator
+  //          update  CPU and Memory  according the instruction
+  inst.op(&(inst.src), &(inst.dst));
+
+  // check timer interrupt from APIC
+  if ((global_time % timer_period) == 0) {
+    interrupt_stack_switching(0x81);
+  }
+}

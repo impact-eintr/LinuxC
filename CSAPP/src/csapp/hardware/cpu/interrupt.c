@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <setjmp.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -168,30 +169,68 @@ static void software_pop_userframe() {
   userframe_t uf;
   memcpy(&cpu_reg, &uf.regs, sizeof(cpu_reg));
   rsp += uf_size;
+
+  // restore cpu registers from user frame
+  memcpy(&cpu_reg, &uf.regs, sizeof(cpu_reg));
+  memcpy(&cpu_flags, &uf.flags, sizeof(cpu_flags));
+
   // pop rsp
   cpu_reg.rsp = rsp;
 }
 
 void interrupt_stack_switching(uint64_t int_vec) {
   assert(0 <= int_vec && int_vec <= 255);
-  // TODO
+  // 1.  Temorarily saves (internally) the current contents of
+  //     the SS, RSP, EFLAGS, CS, and EIP registers.
+  trapframe_t tf = {
+    .rip = cpu_pc.rip,
+    .rsp = cpu_reg.rsp
+  };
+  // 2.  Loads the segment selector and stack pointer for the new stack
+  //     (that is, the stack for the privilege level(特权级) begin called)
+  //     from the TSS into the SS and ESP registers and switchrs to the new stack
+  // stack switch
+  // this kstack is allocated in the heap of emulator
+  cpu_reg.rsp = get_kstack_top_TSS();
+  // 3.  Pushes the temporarily saved SS, ESP, EFLAGS, CS, and EIP values
+  //     for the interrupted procedure's stack onto the new stack
+  hardware_push_trapframe(&tf);
+  // 4.  Pushes an error code on the new stack (if appropriate).
+  // 5.  Loads the segment selector for the new code segment and
+  //     the new instruction pointer (from the interrupt gate or trap gate)
+  //     into the CS and EIP registers, respectively.
   interrupt_handler_t handler = idt[int_vec].handler;
-  // TODO
-  handler();
-  // TODO
+
+  // 6.  If the call is through an interrupt gete
+  //     clears the IF flag in the EFLAGS register.
+  // 7.  Begins execution of the handler procedure at the new privilege level
+  cpu_pc.rip = (uint64_t)&handler; // rip should be kernel handler starting address
+  handler(); // in this func ,we will call os_schedule() so process changed after call
+  // interrupt return IRET
+  interrupt_return_stack_switching();
+
+  // This function (longjmp) will not return
+  // The longjmp will move to the instruction sycle of the newly scheduled process
+  // This interrupt_stack_switching will not return to the old process (invoker)
+  longjmp(USER_INSTRUCTION_ON_IRET, 1);
 }
 
+// interrupt return with stack switching (kernel --> user)
 void interrupt_return_stack_switching() {
-  // TODO
+  hardware_pop_trapframe();
 }
 
 // interrupt handlers
 
 void timer_handler() {
   printf("\033[32;1mTimer interrupt to invoke OS scheduling\033[0m\n");
-  software_push_userframe();
+  software_push_userframe(); // p1
   os_schedule();
-  software_pop_userframe();
+  // After 'os_schedule', rip is running on another process.
+  // Though the kernel code part does not change, but PCB,
+  // page table, kernel stack are all new.
+  // So the user frame restored here is for the new scheduled process.
+  software_pop_userframe(); // maybe p2
 }
 
 void pagefault_handler() {
