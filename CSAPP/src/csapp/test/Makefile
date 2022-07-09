@@ -15,21 +15,34 @@ PROC   = ../process
 
 
 # Mem_alloca and Mem_free
-SRC    = $(ALOC)/block.c $(ALOC)/small_list.c $(ALOC)/segregated_list.c $(ALOC)/mem_alloc.c test_malloc.c
+MSRC   = $(ALOC)/block.c $(ALOC)/small_list.c $(ALOC)/segregated_list.c \
+         $(ALOC)/mem_alloc.c test_malloc.c
 IM     = $(ALGO)/linkedlist.c $(ALOC)/implicit_list.c
 EX     = $(ALGO)/linkedlist.c $(ALOC)/explicit_list.c
-RBT    = $(ALGO)/linkedlist.c  $(ALGO)/bst.c $(ALGO)/rbt.c $(ALOC)/explicit_list.c $(ALOC)/redblack_tree.c
+RBT    = $(ALGO)/linkedlist.c  $(ALGO)/bst.c $(ALGO)/rbt.c \
+				 $(ALOC)/explicit_list.c $(ALOC)/redblack_tree.c
 
 implicit:
-	$(CC) $(SRC) $(IM) -DIMPLICIT_FREE_LIST -g -o test
+	$(CC) $(MSRC) $(IM) -DIMPLICIT_FREE_LIST $(CFLAGS) -o test
 	./test
 
 explicit:
-	$(CC) $(SRC) $(EX) -DEXPLICIT_FREE_LIST -g -o test
+	$(CC) $(MSRC) $(EX) -DEXPLICIT_FREE_LIST $(CFLAGS) -o test
 	./test
 
 rbtree:
-	$(CC) $(COMMON)/convert.c $(SRC) $(RBT) -DREDBLACK_TREE -g -o test
+	$(CC) $(COMMON)/convert.c $(MSRC) $(RBT) -DREDBLACK_TREE $(CFLAGS) -o test
+	./test
+
+# ISA
+ISRC    = $(ALGO)/hashtable.c $(ALGO)/trie.c \
+					$(CPU)/isa.c $(CPU)/mmu.c $(CPU)/interrupt.c $(CPU)/inst.c $(CPU)/sram.c \
+					$(MEM)/dram.c  $(MEM)/swap.c\
+					$(PROC)/syscall.c $(PROC)/pagefault.c $(PROC)/schedule.c \
+					test_run_isa.c
+
+isa:
+	$(CC) $(COMMON)/convert.c $(ISRC) $(CLAGS) -o test
 	./test
 
 clean:
