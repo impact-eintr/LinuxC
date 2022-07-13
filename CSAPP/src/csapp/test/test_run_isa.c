@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,6 +10,8 @@
 #include "../headers/interrupt.h"
 #include "../headers/memory.h"
 #include "../headers/process.h"
+
+void page_map_init();
 
 static void print_register() {
   printf("rax = %16lx\trbx = %16lx\trcx = %16lx\trdx = %16lx\n", cpu_reg.rax,
@@ -38,7 +41,10 @@ static void print_stack() {
   }
 }
 
+pthread_once_t once;
+
 static void TestSyscallPrintHelloWorld() {
+  cpu_reg.rsp = 0x7ffffffee0f0; // init state
   char assembly[12][MAX_INSTRUCTION_CHAR] = {
       // hello world\n\0
       "movq $0x000000000a646c72, %rbx",
@@ -54,6 +60,8 @@ static void TestSyscallPrintHelloWorld() {
       "movq $0, %rdi",
       "int $0x80" // syscall : exit
   };
+
+  pthread_once(&once, page_map_init);
 
   // copy to physical memory
   for (int i = 0; i < 12; ++i) {
