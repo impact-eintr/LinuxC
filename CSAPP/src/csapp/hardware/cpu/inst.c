@@ -9,6 +9,10 @@
 #include "../../headers/algorithm.h"
 #include "../../headers/common.h"
 
+cpu_reg_t cpu_reg;
+cpu_flags_t cpu_flags;
+cpu_pc_t cpu_pc;
+
 // the implementation of ISA
 extern void mov_handler(od_t *src_od, od_t *dst_od);
 extern void push_handler(od_t *src_od, od_t *dst_od);
@@ -23,6 +27,7 @@ extern void jne_handler(od_t *src_od, od_t *dst_od);
 extern void jmp_handler(od_t *src_od, od_t *dst_od);
 extern void lea_handler(od_t *src_od, od_t *dst_od);
 extern void int_handler(od_t *src_od, od_t *dst_od);
+extern void nop_handler(od_t *src_od, od_t *dst_od);
 
 static trie_node_t *register_mapping = NULL;
 static trie_node_t *operator_mapping = NULL;
@@ -213,6 +218,8 @@ static void lazy_initialize_trie() {
         trie_insert(operator_mapping, "lea", (uint64_t)&lea_handler);
     operator_mapping =
         trie_insert(operator_mapping, "int", (uint64_t)&int_handler);
+    operator_mapping =
+        trie_insert(operator_mapping, "nop", (uint64_t)&nop_handler);
   }
 }
 

@@ -20,6 +20,8 @@
 
 #define NUM_TLB_CACHE_LINE_PER_SET (8)
 
+cpu_cr_t cpu_controls;
+
 typedef struct {
   int valid;
   uint64_t tag;
@@ -38,7 +40,6 @@ static tlb_cache_t mmu_tlb;
 
 static uint64_t page_walk(uint64_t vaddr_value);
 static void page_fault_handler(pte4_t *pte, address_t vaddr);
-;
 
 static int read_tlb(uint64_t vaddr_value, uint64_t *paddr_value_ptr,
                     int *free_tlb_line_index);
@@ -142,6 +143,8 @@ static uint64_t page_walk(uint64_t vaddr_value) {
       vaddr.vpn4,
   };
   int vpo = vaddr.vpo;
+  printf("cr3: %lx\n", cpu_controls.cr3);
+  printf("vaddr: %lx\n", vaddr.address_value);
 
   int page_table_size = PAGE_TABLE_ENTRY_NUM * sizeof(pte123_t);
 
@@ -178,7 +181,8 @@ static uint64_t page_walk(uint64_t vaddr_value) {
   }
 PAISE_PAGE_FAULT:
   mmu_vaddr_pagefault = vaddr.vaddr_value;
-  // TODO raise exception 14 (page fault) here
+  // raise exception 14 (page fault) here
+  // This interrupt will not return
   interrupt_stack_switching(0x0e);
   return 0;
 }

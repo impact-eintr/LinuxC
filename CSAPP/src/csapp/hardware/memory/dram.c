@@ -1,13 +1,17 @@
 #include <assert.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "../../headers/address.h"
 #include "../../headers/common.h"
 #include "../../headers/cpu.h"
 #include "../../headers/memory.h"
 
+#define USE_PAGETABLE_VA2PA
 #define USE_SRAM_CACHE
+
+uint8_t pm[PHYSICAL_MEMORY_SPACE];
 
 #ifdef USE_SRAM_CACHE
 uint8_t sram_cache_read(uint64_t paddr_value);
@@ -38,12 +42,13 @@ uint64_t cpu_read64bits_dram(uint64_t paddr) {
 #endif
 
 #ifdef USE_PAGETABLE_VA2PA
-  // TODO
+  pagemap_update_time(paddr >> PHYSICAL_PAGE_OFFSET_LENGTH);
 #endif
   return val;
 }
 
 void cpu_write64bits_dram(uint64_t paddr, uint64_t data) {
+  printf("test\n");
 #ifdef USE_SRAM_CACHE
   for (int i = 0; i < 8; ++i) {
     sram_cache_write(paddr + i, (data >> (i * 8)) & 0xff);
@@ -60,7 +65,8 @@ void cpu_write64bits_dram(uint64_t paddr, uint64_t data) {
 #endif
 
 #ifdef USE_PAGETABLE_VA2PA
-  // TODO
+  pagemap_update_time(paddr >> PHYSICAL_PAGE_OFFSET_LENGTH);
+  pagemap_dirty(paddr >> PHYSICAL_PAGE_OFFSET_LENGTH);
 #endif
 }
 
@@ -69,7 +75,7 @@ void cpu_readinst_dram(uint64_t paddr, char *buf) {
     buf[i] = (char)pm[paddr+i];
   }
 #ifdef USE_PAGETABLE_VA2PA
-  // TODO
+  pagemap_update_time(paddr >> PHYSICAL_PAGE_OFFSET_LENGTH);
 #endif
 }
 
@@ -85,7 +91,8 @@ void cpu_writeinst_dram(uint64_t paddr, const char *str) {
     }
   }
 #ifdef USE_PAGETABLE_VA2PA
-  // TODO
+  pagemap_update_time(paddr >> PHYSICAL_PAGE_OFFSET_LENGTH);
+  pagemap_dirty(paddr >> PHYSICAL_PAGE_OFFSET_LENGTH);
 #endif
 }
 

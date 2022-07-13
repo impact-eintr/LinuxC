@@ -4,7 +4,7 @@
 # @file
 # @version 0.1
 CC     = gcc
-CFLAGS += -g -Wall
+CFLAGS += -g
 COMMON = ../common
 ALGO   = ../algorithm
 ALOC   = ../malloc
@@ -42,8 +42,20 @@ ISRC    = $(ALGO)/hashtable.c $(ALGO)/trie.c \
 					test_run_isa.c
 
 isa:
-	$(CC) $(COMMON)/convert.c $(ISRC) $(CLAGS) -o test
+	$(CC) $(COMMON)/convert.c $(ISRC) $(CFLAGS) -o test
 	./test
+
+
+# PageFault
+PSRC    = $(ALGO)/hashtable.c $(ALGO)/trie.c \
+					$(CPU)/isa.c $(CPU)/mmu.c $(CPU)/interrupt.c $(CPU)/inst.c $(CPU)/sram.c \
+					$(MEM)/dram.c  $(MEM)/swap.c\
+					$(PROC)/syscall.c $(PROC)/pagefault.c $(PROC)/schedule.c \
+					test_pagefault.c
+pagefault:
+	$(CC) $(COMMON)/convert.c $(PSRC) $(CFLAGS) -o test
+	./test
+
 
 clean:
 	$(RM) ./test

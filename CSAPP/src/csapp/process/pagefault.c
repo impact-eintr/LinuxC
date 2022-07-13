@@ -10,6 +10,7 @@
 #include "../headers/cpu.h"
 #include "../headers/process.h"
 
+uint64_t mmu_vaddr_pagefault;
 
 // swap in / out
 int swap_in(uint64_t saddr, uint64_t ppn);
@@ -28,7 +29,7 @@ typedef struct {
 static pd_t page_map[MAX_NUM_PHYSICAL_PAGE];
 
 // get the level 4 page table entry
-static pte4_t* get_entry(pte123_t *pgd, address_t *vaddr) {
+static pte4_t* get_entry4(pte123_t *pgd, address_t *vaddr) {
   int vpns[4] = {
       vaddr->vpn1,
       vaddr->vpn2,
@@ -94,7 +95,7 @@ void set_pagemap_swapaddr(uint64_t ppn, uint64_t swap_address) {
 void map_pte4(pte4_t *pte, uint64_t ppn) {
   assert(0 <= ppn && ppn < MAX_NUM_PHYSICAL_PAGE);
   assert(page_map[ppn].allocated == 0);
-  assert(page_map[ppn].pte4->present == 0);
+  assert(page_map[ppn].dirty == 0);
   assert(page_map[ppn].pte4 == NULL);
 
   // Let's consider this, where can we store the swap adress on disk?
@@ -130,18 +131,17 @@ void unmap_pte4(uint64_t ppn) {
   page_map[ppn].pte4 = NULL;
 }
 
-// TODO fix pagefault
+// fix pagefault : interrupt.c/pagefault_handler() call
 void fix_pagefault() {
   // get page table directory from rsp
   pcb_t *pcb = get_current_pcb();
   pte123_t *pgd = pcb->mm.pgd;
 
-  // get the fauling address from MMU register
-  // TODO where initialize mmu_vaddr_pagefault
-  address_t vaddr = {.address_value = mmu_vaddr_pagefault};
+  // get the faulting address from MMU register
+  address_t vaddr = {.address_value = mmu_vaddr_pagefault}; // a global mmu vaddr
 
   // get the level 4 page table entry
-  pte4_t *pte = get_entry(pgd, &vaddr);
+  pte4_t *pte = get_entry4(pgd, &vaddr);
 
   // 1 try to request one free physical page from DRAM
   for (int i = 0;i < MAX_NUM_PHYSICAL_PAGE;++i) {
@@ -198,3 +198,7 @@ void fix_pagefault() {
 
   printf("\033[34;1m\tPageFault: write back & use ppn %d\033[0m\n", lru_ppn);
 }
+
+int copy_userframe(pte4_t *child_pte, uint64_t parent_ppn) {return 0;}
+
+int enough_frame(int request_num) {return 0;}

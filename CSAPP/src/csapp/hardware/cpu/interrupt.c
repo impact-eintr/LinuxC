@@ -9,11 +9,13 @@
 #include "../../headers/interrupt.h"
 #include "../../headers/process.h"
 
+tss_s0_t tr_global_tss;
+jmp_buf USER_INSTRUCTION_ON_IRET;
 
 typedef void (*interrupt_handler_t)();
 
 // the entry of IDT/IVT
-  //     kernel mode. So ensure that the kernel stack is empty now
+// kernel mode. So ensure that the kernel stack is empty now
 typedef struct IDT_ENTRY_STRUCT
 {
   interrupt_handler_t handler;
@@ -24,7 +26,7 @@ idt_entry_t idt[256];
 
 // handlers of IDT
 void pagefault_handler(); // trap gate - exception
-void syscall_handler();   // trap get - software interrupt / trap
+void syscall_handler();   // trap gate - software interrupt / trap
 void timer_handler();     // interrupt gate - local APIC
 
 // implementation of hanlers
@@ -79,7 +81,8 @@ static uint64_t hardware_push_trapframe(trapframe_t *tf) {
   uint32_t tf_size = sizeof(trapframe_t);
   assert(tf_size < KERNEL_STACK_SIZE);
   rsp -= tf_size;
-  memcpy((trapframe_t*)rsp, tf, tf_size);
+  memcpy((trapframe_t *)rsp, tf, tf_size);
+  printf("tf->rip: %lx tf->rsp: %lx cpu_reg.rsp: %lx\n", tf->rip, tf->rsp, rsp);
 
   // 3.  Update RSP
   cpu_reg.rsp = rsp;
@@ -107,7 +110,7 @@ static void hardware_pop_trapframe() {
 
   // pop trap frame
   rsp += tf_size;
-  assert(rsp == tf.rsp); // NOTE this is a TEST
+  //assert(rsp == tf.rsp); // NOTE this is a TEST
   cpu_reg.rsp = rsp;
   // Restore the CS and EIP registerrs top their values prior to the interrupt or exception
   cpu_pc.rip = tf.rip;
@@ -178,6 +181,7 @@ static void software_pop_userframe() {
   cpu_reg.rsp = rsp;
 }
 
+// call interrupt with stack switching user -> kernel
 void interrupt_stack_switching(uint64_t int_vec) {
   assert(0 <= int_vec && int_vec <= 255);
   // 1.  Temorarily saves (internally) the current contents of
@@ -186,6 +190,8 @@ void interrupt_stack_switching(uint64_t int_vec) {
     .rip = cpu_pc.rip,
     .rsp = cpu_reg.rsp
   };
+
+  printf("tf.rip: %lx tf.rsp: %lx\n", tf.rip, tf.rsp);
   // 2.  Loads the segment selector and stack pointer for the new stack
   //     (that is, the stack for the privilege level(特权级) begin called)
   //     from the TSS into the SS and ESP registers and switchrs to the new stack
@@ -206,9 +212,15 @@ void interrupt_stack_switching(uint64_t int_vec) {
   // 7.  Begins execution of the handler procedure at the new privilege level
   cpu_pc.rip = (uint64_t)&handler; // rip should be kernel handler starting address
   handler(); // in this func ,we will call os_schedule() so process changed after call
+
+  printf("After push\n");
+  print_kstack();
+
   // interrupt return IRET
   interrupt_return_stack_switching();
 
+  printf("After pop\n");
+  print_kstack();
   // This function (longjmp) will not return
   // The longjmp will move to the instruction sycle of the newly scheduled process
   // This interrupt_stack_switching will not return to the old process (invoker)
@@ -269,6 +281,25 @@ void syscall_handler() {
 static void print_kstack() {
   uint64_t kstack_bottom_vaddr = get_kstack_RSP();
   uint64_t kstack_top_vaddr = kstack_bottom_vaddr + KERNEL_STACK_SIZE;
+  if (kstack_bottom_vaddr == 0) {
+    // trap frame
+    printf("=====\nTrap frame: 0x%016lx\n", 0l);
+    printf("RIP: %016lx\nRSP: %016lx\n", 0l, 0l);
+
+    // user frame
+    printf("=====\nUser frame: 0x%016lx\n", 0l);
+    printf("RAX: %016lx\n"
+           "RBX: %016lx\n"
+           "RCX: %016lx\n"
+           "RDX: %016lx\n"
+           "RSI: %016lx\n"
+           "RDI: %016lx\n"
+           "RBP: %016lx\n"
+           "RSP: %016lx\n"
+           "CF: %d\tZF: %d\tSF: %d\tOF: %d\n",
+           0l, 0l, 0l, 0l, 0l, 0l, 0l, 0l, 0, 0, 0, 0);
+    return;
+  }
 
   uint64_t tfa = kstack_top_vaddr - sizeof(trapframe_t);
   uint64_t ufa = tfa - sizeof(userframe_t);

@@ -9,7 +9,7 @@
 #define PAGE_TABLE_ENTRY_NUM (512)
 #define PAGE_SIZE (4096)
 
-uint8_t pm[PHYSICAL_MEMORY_SPACE];
+extern uint8_t pm[PHYSICAL_MEMORY_SPACE];
 
 // page table struct
 

@@ -151,7 +151,7 @@ typedef struct {
     uint8_t r15b;
   };
 } cpu_reg_t;
-cpu_reg_t cpu_reg;
+extern cpu_reg_t cpu_reg;
 
 
 /*=============================*/
@@ -168,14 +168,14 @@ typedef union {
     uint16_t OF;
   };
 } cpu_flags_t;
-cpu_flags_t cpu_flags;
+extern cpu_flags_t cpu_flags;
 
 // program counter or instruction pointer
 typedef union {
   uint64_t rip;
   uint32_t eip;
 } cpu_pc_t;
-cpu_pc_t cpu_pc;
+extern cpu_pc_t cpu_pc;
 
 
 // TSS
@@ -189,7 +189,7 @@ typedef struct TSS_S0 {
 // Intel thinks that each process can have ite own TSS
 // But we can use only one TSS globally
 // pointing to task-State Segment (in main memory) of the current process
-tss_s0_t tr_global_tss;
+extern tss_s0_t tr_global_tss;
 
 // Control registers
 typedef struct {
@@ -199,14 +199,14 @@ typedef struct {
   uint64_t cr3; // should be a 40-bits ppN for PGD in DRAM
                 // but we are using 48-bits virtual address on simulator's heap
 } cpu_cr_t;
-cpu_cr_t cpu_controls;
+extern cpu_cr_t cpu_controls;
 
 
 #define NUM_INSTRTYPE 14
 void instruction_cycle();
 
-// mmu functions
-uint64_t mmu_vaddr_pagefault;
+// global mmu pagefault virtual address
+extern uint64_t mmu_vaddr_pagefault;
 
 uint64_t va2pa(uint64_t vaddr);
 
