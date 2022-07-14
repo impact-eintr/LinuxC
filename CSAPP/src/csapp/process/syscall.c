@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "../headers/cpu.h"
 #include "../headers/interrupt.h"
@@ -35,7 +36,7 @@ static void destrory_user_registers() {
 }
 
 // initialize of IDT
-void syacall_init() {
+void syscall_init() {
   syscall_table[01].handler = write_handler;
   syscall_table[39].handler = getpid_handler;
   syscall_table[57].handler = fork_handler;
@@ -57,7 +58,11 @@ static void write_handler() {
 
   for (int i = 0;i < buf_length;++i) {
     // printf as yellow
-    printf("\033[33;1m%c\033[0m", pm[va2pa(buf_vaddr + i)]);
+    uint64_t pc_pa = va2pa(buf_vaddr + i);
+    printf("\033[33;1m%c\033[0m", pm[pc_pa]);
+    // char buf[128] = {0};
+    // sprintf(buf, "\033[33;1m%c\033[0m", pm[va2pa(buf_vaddr + i)]);
+    // write(file_no, buf, strlen(buf));
   }
 }
 
@@ -67,7 +72,10 @@ static void fork_handler() {}
 
 static void execve_handler() {}
 
-static void exit_handler() {}
+static void exit_handler() {
+  uint64_t exit_status = cpu_reg.rdi;
+  printf("\033[33;1mExit with %lx\n\033[0m", exit_status);
+}
 
 static void wait_handler() {}
 

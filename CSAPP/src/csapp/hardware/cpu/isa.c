@@ -42,9 +42,10 @@ void mov_handler(od_t *src_od, od_t *dst_od) {
 
 void push_handler(od_t *src_od, od_t *dst_od) { // src:reg dst:empty
   if (src_od->type == OD_REG) {
+    uint64_t rsp_pa = va2pa(cpu_reg.rsp - 8);
+    cpu_write64bits_dram(rsp_pa, *(uint64_t *)(src_od->value));
+
     cpu_reg.rsp = cpu_reg.rsp - 8;
-    uint64_t rsp_pa = va2pa(cpu_reg.rsp);
-    cpu_write64bits_dram(rsp_pa, *(uint64_t*)(src_od->value));
     increase_pc();
     cpu_flags.__flags_value = 0;
     return;
@@ -206,6 +207,7 @@ void int_handler(od_t *src_od, od_t *dst_od) {
 
 void nop_handler(od_t *src_od, od_t *dst_od) {
   increase_pc();
+  cpu_flags.__flags_value = 0;
 }
 
 // from inst.c
@@ -215,6 +217,7 @@ void parse_instruction(char *inst_str, inst_t *inst);
 static uint64_t global_time = 0;
 static uint64_t timer_period = 5;
 
+#define DEBUG_INSTRUCTION_CYCLE
 // instruction sycle is implement in cpu
 // the only exposed interface utside CPU
 void instruction_cycle() {
@@ -231,7 +234,7 @@ void instruction_cycle() {
   cpu_readinst_dram(pc_pa, inst_str);
 
 #ifdef DEBUG_INSTRUCTION_CYCLE
-  printf("%8lx       %s", cpu_pc.rip, inst_str);
+  printf("EXECUTE INSTRUCTION %8lx       %s\n", cpu_pc.rip, inst_str);
 #endif
 
   // DECODE: decode the run-time instruction operands

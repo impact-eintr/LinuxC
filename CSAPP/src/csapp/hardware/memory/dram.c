@@ -9,7 +9,7 @@
 #include "../../headers/memory.h"
 
 #define USE_PAGETABLE_VA2PA
-#define USE_SRAM_CACHE
+//#define USE_SRAM_CACHE
 
 uint8_t pm[PHYSICAL_MEMORY_SPACE];
 
@@ -48,7 +48,6 @@ uint64_t cpu_read64bits_dram(uint64_t paddr) {
 }
 
 void cpu_write64bits_dram(uint64_t paddr, uint64_t data) {
-  printf("test\n");
 #ifdef USE_SRAM_CACHE
   for (int i = 0; i < 8; ++i) {
     sram_cache_write(paddr + i, (data >> (i * 8)) & 0xff);

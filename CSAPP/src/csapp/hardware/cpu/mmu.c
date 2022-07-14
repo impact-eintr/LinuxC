@@ -12,7 +12,7 @@
 #include "../../headers/memory.h"
 
 #define USE_PAGETABLE_VA2PA
-#define USE_TLB_HARDWARE
+//#define USE_TLB_HARDWARE
 
 // ----------------------------- //
 //  Translation Lookaside Buffer
@@ -69,6 +69,10 @@ uint64_t va2pa(uint64_t vaddr) {
   if (paddr != 0) {
     // TLB write
     if (write_tlb(vaddr, paddr, free_tlb_line_index) == 1) {
+      uint64_t paddr_cache = 0;
+      free_tlb_line_index = -1;
+      read_tlb(vaddr, &paddr_cache, &free_tlb_line_index);
+      printf("-=-=-=-TLB write vaddr %lx HIT paddr_cache %lx\n", vaddr, paddr_cache);
       return paddr;
     }
   }
@@ -114,13 +118,13 @@ static int write_tlb(uint64_t vaddr_value, uint64_t paddr_value,
     tlb_cacheline_t *line = &set->lines[free_tlb_line_index];
     line->valid = 1;
     line->ppn = paddr.ppn;
+      printf("%lx\n", line->ppn);
     line->tag = vaddr.tlbt;
 
     return 1;
   }
   // no free TLB cache line, select on DRAM victim
   int random_victim_index = random() % NUM_TLB_CACHE_LINE_PER_SET;
-
   tlb_cacheline_t *line = &set->lines[random_victim_index];
   line->valid = 1;
   line->ppn = paddr.ppn;
@@ -143,8 +147,8 @@ static uint64_t page_walk(uint64_t vaddr_value) {
       vaddr.vpn4,
   };
   int vpo = vaddr.vpo;
-  printf("cr3: %lx\n", cpu_controls.cr3);
-  printf("vaddr: %lx\n", vaddr.address_value);
+  //printf("cr3: %lx\n", cpu_controls.cr3);
+  //printf("vaddr: %lx\n", vaddr.address_value);
 
   int page_table_size = PAGE_TABLE_ENTRY_NUM * sizeof(pte123_t);
 

@@ -79,8 +79,7 @@ static void TestPageFaultHandlingCase1() {
       "mov $2, %rax",
   };
 
-  memcpy((char *)(&pm[0 + code_addr.ppo]), &code,
-         sizeof(char) * 3 * MAX_INSTRUCTION_CHAR);
+  memcpy((char *)(&pm[0 + code_addr.ppo]), &code, sizeof(char) * 3 * MAX_INSTRUCTION_CHAR);
   // virtual address 0x7fff1234 would trigger page fault
   // Mark all other page_map as allocated
   uint64_t free_ppn = 13;
@@ -106,9 +105,155 @@ static void TestPageFaultHandlingCase1() {
   for (int i = 0; i < 2; ++i) {
     instruction_cycle();
   }
+  printf("\033[32;1m\tPass\033[0m\n");
+}
+
+static void TestPageFaultHandlingCase2() {
+  cpu_pc.rip = 0x00400000;
+  address_t fault_addr = {.address_value = 0x7fff1234};
+  address_t code_addr = {.address_value = cpu_pc.rip};
+
+  page_map_init();
+
+  // pcb is need to trigger page fault
+  pcb_t p1;
+  memset(&p1, 0, sizeof(pcb_t));
+  p1.pid = 1;
+  p1.next = &p1;
+  p1.prev = &p1;
+
+  // prepare PGD
+  pte123_t p1_pgd[512];
+  memset(&p1_pgd, 0, sizeof(pte123_t) * 512);
+  p1.mm.pgd = &p1_pgd[0];
+  // prepare PUD
+  pte123_t p1_pud[512];
+  memset(&p1_pud, 0, sizeof(pte123_t) * 512);
+  // prepare PMD
+  pte123_t p1_pmd[512];
+  memset(&p1_pmd, 0, sizeof(pte123_t) * 512);
+  // prepare PT
+  pte4_t p1_pt[512];
+  memset(&p1_pt, 0, sizeof(pte4_t) * 512);
+  link_page_table(&p1_pgd[0], &p1_pud[0], &p1_pmd[0], &p1_pt[0], 0, &code_addr);
+  // load code to frame 0
+  char code[3][MAX_INSTRUCTION_CHAR] = {
+      "mov %rsp, 0x7fff1234",
+      "mov $1, %rax",
+      "mov $2, %rax",
+  };
+
+  memcpy((char *)(&pm[0 + code_addr.ppo]), &code,
+         sizeof(char) * 3 * MAX_INSTRUCTION_CHAR);
+  // virtual address 0x7fff1234 would trigger page fault
+  // Mark all other page_map as allocated
+  uint64_t clean_ppn = 7;
+  pte4_t other_process_pte4[MAX_NUM_PHYSICAL_PAGE];
+  for (int i = 1; i < MAX_NUM_PHYSICAL_PAGE; ++i) {
+    map_pte4(&other_process_pte4[i], i);
+    if (i != clean_ppn) {
+      pagemap_dirty(i);
+    }
+  }
+  // create kernel stacks for trap into kernel
+  uint8_t stack_buf[8192 * 2];
+  uint64_t p1_stack_bottom = (((uint64_t)&stack_buf[8192]) >> 13) << 13;
+  p1.kstack = (kstack_t *)p1_stack_bottom;
+  p1.kstack->threadinfo.pcb = &p1;
+
+  // run p1
+  tr_global_tss.ESP0 = p1_stack_bottom + KERNEL_STACK_SIZE;
+
+  cpu_controls.cr3 = p1.mm.pgd_paddr;
+  idt_init();
+
+  // this should trigger page fault
+  for (int i = 0; i < 2; ++i) {
+    instruction_cycle();
+  }
+  printf("\033[32;1m\tPass\033[0m\n");
+}
+
+static void TestPageFaultHandlingCase3() {
+  cpu_pc.rip = 0x00400000;
+  address_t fault_addr = {.address_value = 0x7fff1234};
+  address_t code_addr = {.address_value = cpu_pc.rip};
+
+  page_map_init();
+
+  // pcb is need to trigger page fault
+  pcb_t p1;
+  memset(&p1, 0, sizeof(pcb_t));
+  p1.pid = 1;
+  p1.next = &p1;
+  p1.prev = &p1;
+
+  // prepare PGD
+  pte123_t p1_pgd[512];
+  memset(&p1_pgd, 0, sizeof(pte123_t) * 512);
+  p1.mm.pgd = &p1_pgd[0];
+  // prepare PUD
+  pte123_t p1_pud[512];
+  memset(&p1_pud, 0, sizeof(pte123_t) * 512);
+  // prepare PMD
+  pte123_t p1_pmd[512];
+  memset(&p1_pmd, 0, sizeof(pte123_t) * 512);
+  // prepare PT
+  pte4_t p1_pt[512];
+  memset(&p1_pt, 0, sizeof(pte4_t) * 512);
+  link_page_table(&p1_pgd[0], &p1_pud[0], &p1_pmd[0], &p1_pt[0], 0, &code_addr);
+  // load code to frame 0
+  char code[3][MAX_INSTRUCTION_CHAR] = {
+      "mov %rsp, 0x7fff1234",
+      "mov $1, %rax",
+      "mov $2, %rax",
+  };
+
+  memcpy((char *)(&pm[0 + code_addr.ppo]), &code,
+         sizeof(char) * 3 * MAX_INSTRUCTION_CHAR);
+  // virtual address 0x7fff1234 would trigger page fault
+  // Mark all other page_map as allocated
+  pte4_t other_process_pte4[MAX_NUM_PHYSICAL_PAGE];
+  char filename[128];
+  for (int i = 0; i < MAX_NUM_PHYSICAL_PAGE; ++i) {
+    if (i > 0) {
+      map_pte4(&other_process_pte4[i], i);
+      pagemap_dirty(i);
+      allocate_swappage(i);
+    } else {
+      pagemap_dirty(i);
+    }
+  }
+
+  uint64_t lru_ppn = 14;
+  for (int i =0;i < MAX_NUM_PHYSICAL_PAGE;++i) {
+    if (i != lru_ppn) {
+      pagemap_update_time(i);
+    }
+  }
+
+  // create kernel stacks for trap into kernel
+  uint8_t stack_buf[8192 * 2];
+  uint64_t p1_stack_bottom = (((uint64_t)&stack_buf[8192]) >> 13) << 13;
+  p1.kstack = (kstack_t *)p1_stack_bottom;
+  p1.kstack->threadinfo.pcb = &p1;
+
+  // run p1
+  tr_global_tss.ESP0 = p1_stack_bottom + KERNEL_STACK_SIZE;
+
+  cpu_controls.cr3 = p1.mm.pgd_paddr;
+  idt_init();
+
+  // this should trigger page fault
+  for (int i = 0; i < 2; ++i) {
+    instruction_cycle();
+  }
+  printf("\033[32;1m\tPass\033[0m\n");
 }
 
 int main() {
   TestPageFaultHandlingCase1();
+  //TestPageFaultHandlingCase2();
+  //TestPageFaultHandlingCase3();
   return 0;
 }

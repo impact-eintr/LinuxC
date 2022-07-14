@@ -82,7 +82,7 @@ static uint64_t hardware_push_trapframe(trapframe_t *tf) {
   assert(tf_size < KERNEL_STACK_SIZE);
   rsp -= tf_size;
   memcpy((trapframe_t *)rsp, tf, tf_size);
-  printf("tf->rip: %lx tf->rsp: %lx cpu_reg.rsp: %lx\n", tf->rip, tf->rsp, rsp);
+  printf("tf->rip: %lx tf->rsp: %lx cpu_reg.rsp: %lx\n", tf->rip, tf->rsp, rsp+tf_size);
 
   // 3.  Update RSP
   cpu_reg.rsp = rsp;
@@ -110,13 +110,12 @@ static void hardware_pop_trapframe() {
 
   // pop trap frame
   rsp += tf_size;
-  //assert(rsp == tf.rsp); // NOTE this is a TEST
   cpu_reg.rsp = rsp;
   // Restore the CS and EIP registerrs top their values prior to the interrupt or exception
   cpu_pc.rip = tf.rip;
   // Restores the EFLAGS register.
   // Restore the SS and ESP registerrs top their values prior to the interrupt or exception
-  cpu_reg.rsp = tf.rsp; // TODO ESP?
+  cpu_reg.rsp = tf.rsp;
 }
 
 // USER FRAME IS PART OF OS/SOFTWARE's CONCERN
@@ -170,7 +169,7 @@ static void software_pop_userframe() {
 
   // restore user frame from kstack
   userframe_t uf;
-  memcpy(&cpu_reg, &uf.regs, sizeof(cpu_reg));
+  memcpy(&uf, (trapframe_t *)rsp, uf_size);
   rsp += uf_size;
 
   // restore cpu registers from user frame
@@ -191,7 +190,7 @@ void interrupt_stack_switching(uint64_t int_vec) {
     .rsp = cpu_reg.rsp
   };
 
-  printf("tf.rip: %lx tf.rsp: %lx\n", tf.rip, tf.rsp);
+  printf("int_vec:%lx tf.rip: %lx tf.rsp: %lx\n", int_vec, tf.rip, tf.rsp);
   // 2.  Loads the segment selector and stack pointer for the new stack
   //     (that is, the stack for the privilege level(特权级) begin called)
   //     from the TSS into the SS and ESP registers and switchrs to the new stack
@@ -213,14 +212,9 @@ void interrupt_stack_switching(uint64_t int_vec) {
   cpu_pc.rip = (uint64_t)&handler; // rip should be kernel handler starting address
   handler(); // in this func ,we will call os_schedule() so process changed after call
 
-  printf("After push\n");
-  print_kstack();
-
   // interrupt return IRET
   interrupt_return_stack_switching();
 
-  printf("After pop\n");
-  print_kstack();
   // This function (longjmp) will not return
   // The longjmp will move to the instruction sycle of the newly scheduled process
   // This interrupt_stack_switching will not return to the old process (invoker)
@@ -264,7 +258,6 @@ void syscall_handler() {
   // but we need to simulate kernel stack push & pop.
   // So this is the vaddr of RSP when `do_syscall` returns
   uint64_t rsp_after_do_syscall = cpu_reg.rsp;
-
   // The following instructions are executed in the
   // left space in the kernel stack
   do_syscall(cpu_reg.rax);
@@ -305,6 +298,7 @@ static void print_kstack() {
   uint64_t ufa = tfa - sizeof(userframe_t);
 
   pcb_t *pcb = get_current_pcb();
+  assert(pcb != NULL);
 
   // general info
   printf("Kernel stack info [PID = %ld]\n"

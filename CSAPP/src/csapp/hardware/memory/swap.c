@@ -14,7 +14,7 @@ void set_pagemap_swapaddr(uint64_t ppn, uint64_t swap_address);
 #define SWAP_ADDRESS_MIN (100)
 
 // disk address counter
-static char *SWAP_FILE_DIR = "./swap";
+static char *SWAP_FILE_DIR = "/tmp";
 static uint64_t internal_swap_addr = SWAP_ADDRESS_MIN;
 
 uint64_t allocate_swappage(uint64_t ppn) {
@@ -22,6 +22,7 @@ uint64_t allocate_swappage(uint64_t ppn) {
 
   char filename[128];
   sprintf(filename, "%s/page-%ld.page.txt", SWAP_FILE_DIR, saddr);
+  printf("%s\n", filename);
   FILE *fw = fopen(filename, "w");
   assert(fw != NULL);
 

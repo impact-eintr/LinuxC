@@ -41,7 +41,7 @@ static pte4_t* get_entry4(pte123_t *pgd, address_t *vaddr) {
 
   int level = 0;
   pte123_t *tab = pgd;
-  while(level < 4) {
+  while(level < 3) {
     int vpn = vpns[level];
     if (tab[vpn].present != 1) {
       // allocate a new page for next level
@@ -148,7 +148,8 @@ void fix_pagefault() {
     if (page_map[i].allocated == 0) {
       // found i as free ppn
       map_pte4(pte, i);
-      printf("\033[34;1m\tPageFault: use free ppn %d\033[0m\n", i);
+      printf("\033[34;1m\tPageFault: vaddr[%lx] use free ppn %ld\033[0m\n",
+             vaddr.address_value, pte->ppn);
       return;
     }
   }
