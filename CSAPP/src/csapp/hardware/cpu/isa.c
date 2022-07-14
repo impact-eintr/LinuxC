@@ -37,6 +37,12 @@ void mov_handler(od_t *src_od, od_t *dst_od) {
     increase_pc();
     cpu_flags.__flags_value = 0;
     return;
+  } else if (src_od->type == OD_IMM && dst_od->type == OD_MEM) { // mov $0x1234,(%rax)
+    uint64_t dst_pa = va2pa(src_od->value);
+    cpu_write64bits_dram(dst_pa, src_od->value);
+    increase_pc();
+    cpu_flags.__flags_value = 0;
+    return;
   }
 }
 
