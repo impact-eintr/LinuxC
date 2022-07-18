@@ -147,8 +147,8 @@ static uint64_t page_walk(uint64_t vaddr_value) {
       vaddr.vpn4,
   };
   int vpo = vaddr.vpo;
-  //printf("cr3: %lx\n", cpu_controls.cr3);
-  //printf("vaddr: %lx\n", vaddr.address_value);
+  // printf("cr3: %lx\n", cpu_controls.cr3);
+  // printf("vaddr: %lx\n", vaddr.address_value);
 
   int page_table_size = PAGE_TABLE_ENTRY_NUM * sizeof(pte123_t);
 

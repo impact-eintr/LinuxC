@@ -237,6 +237,7 @@ void instruction_cycle() {
   // FETCH: get the instruction string by program counter
   char inst_str[MAX_INSTRUCTION_CHAR + 10];
   uint64_t pc_pa = va2pa(cpu_pc.rip);
+  printf("============ pc_va: %lx==============\n", pc_pa);
   cpu_readinst_dram(pc_pa, inst_str);
 
 #ifdef DEBUG_INSTRUCTION_CYCLE
