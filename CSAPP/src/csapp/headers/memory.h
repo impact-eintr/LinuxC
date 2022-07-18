@@ -64,6 +64,9 @@ typedef union {
 /*      memory R/W                      */
 /*======================================*/
 
+// used by instructions: read or write uint8_t to DRAM
+uint8_t cpu_read8bits_dram(uint64_t paddr);
+void cpu_write8bits_dram(uint64_t paddr, uint8_t data);
 // used by instructions: read or write uint64_t to DRAM
 uint64_t cpu_read64bits_dram(uint64_t paddr);
 void cpu_write64bits_dram(uint64_t paddr, uint64_t data);

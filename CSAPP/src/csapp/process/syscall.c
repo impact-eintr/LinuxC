@@ -56,14 +56,13 @@ static void write_handler() {
 
   destrory_user_registers();
 
-  for (int i = 0;i < buf_length;++i) {
+  FILE *fp = fdopen(file_no, "w");
+  for (int i = 0; i < buf_length; ++i) {
     // printf as yellow
     uint64_t pc_pa = va2pa(buf_vaddr + i);
-    printf("\033[33;1m%c\033[0m", pm[pc_pa]);
-    // char buf[128] = {0};
-    // sprintf(buf, "\033[33;1m%c\033[0m", pm[va2pa(buf_vaddr + i)]);
-    // write(file_no, buf, strlen(buf));
+    fprintf(fp, "\033[35;1m%c\033[0m", cpu_read8bits_dram(pc_pa));
   }
+  fflush(NULL);
 }
 
 static void getpid_handler() {}

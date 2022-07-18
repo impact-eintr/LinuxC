@@ -195,7 +195,7 @@ void sram_cache_write(uint64_t paddr_value, uint8_t data) {
     }
   }
 #ifdef CACHE_SIMULATION_VERIFICATION
-  sprintf(trace_buf, "buff");
+  sprintf(trace_buf, "miss");
   cache_miss_count++;
 #endif
 
