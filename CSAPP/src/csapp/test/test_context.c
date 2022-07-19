@@ -32,8 +32,6 @@ static void load_code_physically(int pid, address_t *code_addr) {
       "jmp 0x00400100"          // 7: jump to 4
   };
   code[0][13] = (uint8_t)pid + '0'; // $0x000a3170 $0x000a3270 $0x000a3370
-  printf("%s\n", code[0]);
-  printf("src: %x\n", (pid - 1) * PAGE_SIZE + code_addr->vpo);
   uint8_t *start = &pm[(pid - 1) * PAGE_SIZE + code_addr->vpo];
   memcpy((char *)start, &code, sizeof(char) * 8 * MAX_INSTRUCTION_CHAR);
 }
@@ -166,7 +164,7 @@ static void TestContextSwitching() {
 
   printf("begin\n");
   int time = 0;
-  while (time < 20) {
+  while (time < 100) {
     instruction_cycle();
 #ifdef DEBUG_INSTRUCTION_CYCLE_INFO_REG_STACK
     print_register();
@@ -179,5 +177,6 @@ static void TestContextSwitching() {
 }
 
 int main(int argc, char **argv ) {
+  heap_init();
   TestContextSwitching();
 }

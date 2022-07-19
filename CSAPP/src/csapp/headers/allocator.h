@@ -6,7 +6,7 @@
 extern uint64_t heap_start_vaddr;
 extern uint64_t heap_end_vaddr;
 
-#define HEAP_MAX_SIZE (4096 * 8)
+#define HEAP_MAX_SIZE (4096 * 16)
 
 extern uint8_t heap[HEAP_MAX_SIZE];
 

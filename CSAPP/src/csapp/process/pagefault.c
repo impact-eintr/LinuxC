@@ -46,7 +46,8 @@ static pte4_t* get_entry4(pte123_t *pgd, address_t *vaddr) {
     if (tab[vpn].present != 1) {
       // allocate a new page for next level
       pte123_t *new_tab =
-          (pte123_t *)KERNEL_malloc(PAGE_TABLE_ENTRY_NUM * sizeof(pte123_t));
+          //(pte123_t *)KERNEL_malloc(PAGE_TABLE_ENTRY_NUM * sizeof(pte123_t));
+          (pte123_t *)(&heap[(int)KERNEL_malloc(PAGE_TABLE_ENTRY_NUM * sizeof(pte123_t))]);
       // .paddr field is 50 bits
       tab[vpn].paddr = (uint64_t)new_tab;
       tab[vpn].present = 1;

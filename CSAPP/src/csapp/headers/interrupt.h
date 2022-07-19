@@ -6,8 +6,10 @@
 #include <setjmp.h>
 
 #include "cpu.h"
+#include "allocator.h"
 
-#define KERNEL_malloc malloc
+//#define KERNEL_malloc malloc
+#define KERNEL_malloc mem_alloc
 
 typedef struct STRUCT_TRAPFRAME{
   // error code

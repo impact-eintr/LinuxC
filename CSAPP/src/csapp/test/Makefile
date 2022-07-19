@@ -16,22 +16,22 @@ PROC   = ../process
 
 # Mem_alloca and Mem_free
 MSRC   = $(ALOC)/block.c $(ALOC)/small_list.c $(ALOC)/segregated_list.c \
-         $(ALOC)/mem_alloc.c test_malloc.c
-IM     = $(ALGO)/linkedlist.c $(ALOC)/implicit_list.c
-EX     = $(ALGO)/linkedlist.c $(ALOC)/explicit_list.c
+         $(ALOC)/mem_alloc.c
+IM     = $(ALGO)/linkedlist.c $(ALOC)/implicit_list.c -DIMPLICIT_FREE_LIST
+EX     = $(ALGO)/linkedlist.c $(ALOC)/explicit_list.c -DEXPLICIT_FREE_LIST
 RBT    = $(ALGO)/linkedlist.c  $(ALGO)/bst.c $(ALGO)/rbt.c \
-				 $(ALOC)/explicit_list.c $(ALOC)/redblack_tree.c
+				 $(ALOC)/explicit_list.c $(ALOC)/redblack_tree.c -DREDBLACK_TREE
 
 implicit:
-	$(CC) $(MSRC) $(IM) -DIMPLICIT_FREE_LIST $(CFLAGS) -o test
+	$(CC) $(MSRC) $(IM) test_malloc.c  $(CFLAGS) -o test
 	./test
 
 explicit:
-	$(CC) $(MSRC) $(EX) -DEXPLICIT_FREE_LIST $(CFLAGS) -o test
+	$(CC) $(MSRC) $(EX) test_malloc.c  $(CFLAGS) -o test
 	./test
 
 rbtree:
-	$(CC) $(COMMON)/convert.c $(MSRC) $(RBT) -DREDBLACK_TREE $(CFLAGS) -o test
+	$(CC) $(COMMON)/convert.c $(MSRC) $(RBT) test_malloc.c $(CFLAGS) -o test
 	./test
 
 
@@ -51,24 +51,22 @@ isa:
 PSRC    = $(ALGO)/hashtable.c $(ALGO)/trie.c \
 					$(CPU)/isa.c $(CPU)/mmu.c $(CPU)/interrupt.c $(CPU)/inst.c $(CPU)/sram.c \
 					$(MEM)/dram.c  $(MEM)/swap.c\
-					$(PROC)/syscall.c $(PROC)/pagefault.c $(PROC)/schedule.c \
-					test_pagefault.c
+					$(PROC)/syscall.c $(PROC)/pagefault.c $(PROC)/schedule.c
+
 pagefault:
-	$(CC) $(COMMON)/convert.c $(PSRC) $(CFLAGS) -o test
+	$(CC) $(COMMON)/convert.c $(PSRC) test_pagefault.c $(CFLAGS) -o test
 	./test
 
 
-# Context
+# Switch Context with KMALLOC(mem_alloc)
 CSRC    = $(ALGO)/hashtable.c $(ALGO)/trie.c \
 					$(CPU)/isa.c $(CPU)/mmu.c $(CPU)/interrupt.c $(CPU)/inst.c $(CPU)/sram.c \
 					$(MEM)/dram.c  $(MEM)/swap.c\
-					$(PROC)/syscall.c $(PROC)/pagefault.c $(PROC)/schedule.c \
-					test_context.c
+					$(PROC)/syscall.c $(PROC)/pagefault.c $(PROC)/schedule.c
 
 context:
-	$(CC) $(COMMON)/convert.c $(CSRC) $(CFLAGS) -o test
+	$(CC) $(COMMON)/convert.c $(CSRC) $(MSRC) $(RBT) test_context.c $(CFLAGS) -o test
 	./test
-
 
 
 clean:
