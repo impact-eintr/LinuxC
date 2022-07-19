@@ -34,6 +34,7 @@ typedef struct {
 
 typedef struct {
   tlb_cacheset_t sets[(1 << TLB_CACHE_INDEX_LENGTH)];
+  uint64_t pgd;
 } tlb_cache_t;
 
 static tlb_cache_t mmu_tlb;
@@ -45,6 +46,7 @@ static int read_tlb(uint64_t vaddr_value, uint64_t *paddr_value_ptr,
                     int *free_tlb_line_index);
 static int write_tlb(uint64_t vaddr_value, uint64_t paddr_value,
                      int free_tlb_line_index);
+void clear_tlb();
 
 uint64_t va2pa(uint64_t vaddr) {
 #ifdef USE_NAVIE_VA2PA
@@ -52,6 +54,10 @@ uint64_t va2pa(uint64_t vaddr) {
 #endif
   uint64_t paddr = 0;
 #if defined(USE_TLB_HARDWARE) && defined(USE_PAGETABLE_VA2PA)
+  if (mmu_tlb.pgd != cpu_controls.cr3) {
+    clear_tlb();
+    mmu_tlb.pgd = cpu_controls.cr3;
+  }
   int free_tlb_line_index = -1;
   int tlb_hit = read_tlb(vaddr, &paddr, &free_tlb_line_index);
   if (tlb_hit) {
@@ -127,6 +133,16 @@ static int write_tlb(uint64_t vaddr_value, uint64_t paddr_value,
 
   return 1;
 }
+
+void clear_tlb() {
+  for (int i = 0; i < (1 << TLB_CACHE_INDEX_LENGTH); ++i) {
+    tlb_cacheset_t *set = &mmu_tlb.sets[i];
+    for (int j = 0; j < NUM_TLB_CACHE_LINE_PER_SET; ++j) {
+      set->lines[j].valid = 0;
+    }
+  }
+}
+
 #endif
 
 #ifdef USE_PAGETABLE_VA2PA

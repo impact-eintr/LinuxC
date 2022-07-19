@@ -34,6 +34,7 @@ rbtree:
 	$(CC) $(COMMON)/convert.c $(MSRC) $(RBT) -DREDBLACK_TREE $(CFLAGS) -o test
 	./test
 
+
 # ISA
 ISRC    = $(ALGO)/hashtable.c $(ALGO)/trie.c \
 					$(CPU)/isa.c $(CPU)/mmu.c $(CPU)/interrupt.c $(CPU)/inst.c $(CPU)/sram.c \
@@ -55,6 +56,19 @@ PSRC    = $(ALGO)/hashtable.c $(ALGO)/trie.c \
 pagefault:
 	$(CC) $(COMMON)/convert.c $(PSRC) $(CFLAGS) -o test
 	./test
+
+
+# Context
+CSRC    = $(ALGO)/hashtable.c $(ALGO)/trie.c \
+					$(CPU)/isa.c $(CPU)/mmu.c $(CPU)/interrupt.c $(CPU)/inst.c $(CPU)/sram.c \
+					$(MEM)/dram.c  $(MEM)/swap.c\
+					$(PROC)/syscall.c $(PROC)/pagefault.c $(PROC)/schedule.c \
+					test_context.c
+
+context:
+	$(CC) $(COMMON)/convert.c $(CSRC) $(CFLAGS) -o test
+	./test
+
 
 
 clean:
