@@ -17,7 +17,7 @@ typedef union KERNEL_STACK_STRUCT {
 
 typedef struct STRUCT_PROCESS_CONTEXT {
   cpu_reg_t regs;
-  cpu_flags_t falgs;
+  cpu_flags_t flags;
 } context_t;
 
 typedef struct PROCESS_CONTROL_BLOCK_STRUCT {

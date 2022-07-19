@@ -14,4 +14,29 @@ pcb_t *get_current_pcb() {
   return current_pcb;
 }
 
-void os_schedule() {}
+static void store_context(pcb_t *proc) {
+  context_t ctx = {
+    .regs = cpu_reg,
+    .flags = cpu_flags
+  };
+  memcpy(&(proc->context), &ctx, sizeof(context_t));
+}
+
+static void restore_context(pcb_t *proc) {
+  memcpy(&cpu_reg, &(proc->context.regs), sizeof(cpu_reg_t));
+  memcpy(&cpu_flags, &(proc->context.flags), sizeof(cpu_flags_t));
+}
+
+void os_schedule() {
+  pcb_t *pcb_old = get_current_pcb();
+  pcb_t *pcb_new = pcb_old->next;
+  printf("\t\033[31;1mOS schedule [%ld] -> [%ld]\033[0m\n", pcb_old->pid, pcb_new->pid);
+
+  store_context(pcb_old);
+
+  restore_context(pcb_new);
+
+  tr_global_tss.ESP0 = get_kstack_RSP() + KERNEL_STACK_SIZE;
+
+  cpu_controls.cr3 = (uint64_t)(pcb_new->mm.pgd);
+}
