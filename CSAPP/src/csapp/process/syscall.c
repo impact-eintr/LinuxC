@@ -56,18 +56,22 @@ static void write_handler() {
 
   destrory_user_registers();
 
-  FILE *fp = fdopen(file_no, "w");
   for (int i = 0; i < buf_length; ++i) {
     // printf as yellow
     uint64_t pc_pa = va2pa(buf_vaddr + i);
-    fprintf(fp, "\033[35;1m%c\033[0m", cpu_read8bits_dram(pc_pa));
+    printf("\033[35;1m%c\033[0m", cpu_read8bits_dram(pc_pa));
   }
-  fflush(NULL);
 }
 
 static void getpid_handler() {}
 
-static void fork_handler() {}
+static void fork_handler() {
+  uint64_t kernel_rsp = cpu_reg.rsp;
+  destrory_user_registers();
+  cpu_reg.rsp = kernel_rsp;
+
+  syscall_fork();
+}
 
 static void execve_handler() {}
 

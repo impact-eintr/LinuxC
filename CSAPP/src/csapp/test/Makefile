@@ -4,7 +4,7 @@
 # @file
 # @version 0.1
 CC     = gcc
-CFLAGS += -g
+CFLAGS += -g -std=c11
 COMMON = ../common
 ALGO   = ../algorithm
 ALOC   = ../malloc
@@ -66,6 +66,17 @@ CSRC    = $(ALGO)/hashtable.c $(ALGO)/trie.c \
 
 context:
 	$(CC) $(COMMON)/convert.c $(CSRC) $(MSRC) $(RBT) test_context.c $(CFLAGS) -o test
+	./test
+
+
+# Switch Context with KMALLOC(mem_alloc)
+FSRC    = $(ALGO)/hashtable.c $(ALGO)/trie.c \
+					$(CPU)/isa.c $(CPU)/mmu.c $(CPU)/interrupt.c $(CPU)/inst.c $(CPU)/sram.c \
+					$(MEM)/dram.c  $(MEM)/swap.c\
+					$(PROC)/syscall.c $(PROC)/pagefault.c $(PROC)/schedule.c $(PROC)/fork.c
+
+fork:
+	$(CC) $(COMMON)/convert.c $(FSRC) $(MSRC) $(IM) test_fork.c $(CFLAGS) -o test
 	./test
 
 

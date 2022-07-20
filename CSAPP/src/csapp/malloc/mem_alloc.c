@@ -362,6 +362,33 @@ uint64_t mem_alloc(uint32_t size) {
   return payload_vaddr;
 }
 
+
+uint64_t implicit_list_search_free_aligned_block(uint32_t payload_size,
+                                                 uint32_t *alloc_blocksize,
+                                                 uint64_t aligned);
+
+uint64_t mem_aligned_alloc(uint32_t size, uint64_t aligned) {
+  assert(0 < size && size < HEAP_MAX_SIZE - 4 - 8 - 4);
+
+  uint32_t alloc_blocksize = 0;
+  uint64_t payload_header =
+      implicit_list_search_free_aligned_block(size, &alloc_blocksize, aligned);
+  uint64_t payload_vaddr = NIL;
+
+  if (payload_header != NIL) {
+    payload_vaddr = try_alloc_with_splitting(payload_header, alloc_blocksize);
+    assert(payload_vaddr != NIL);
+  } else {
+    payload_vaddr = try_extend_heap_to_alloc(alloc_blocksize);
+  }
+#ifdef DEBUG_MALLOC
+  check_heap_correctness();
+  check_free_block();
+  heap_blocks_print();
+#endif
+  return payload_vaddr;
+}
+
 void mem_free(uint64_t payload_vaddr) {
   if (payload_vaddr == NIL) {
     return;

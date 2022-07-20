@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "../headers/memory.h"
 #include "../headers/address.h"
@@ -201,6 +202,34 @@ void fix_pagefault() {
   printf("\033[34;1m\tPageFault: write back & use ppn %d\033[0m\n", lru_ppn);
 }
 
-int copy_userframe(pte4_t *child_pte, uint64_t parent_ppn) {return 0;}
+int copy_userframe(pte4_t *child_pte, uint64_t parent_ppn) {
+  assert(0 <= parent_ppn && parent_ppn < MAX_NUM_PHYSICAL_PAGE);
+  for (int i = 0; i < MAX_NUM_PHYSICAL_PAGE; ++ i)
+  {
+    if (page_map[i].allocated == 0)
+    {
+      // found i as free ppn
+      map_pte4(child_pte, i);
+      // copy user frame
+      memcpy(&pm[i << PHYSICAL_PAGE_OFFSET_LENGTH],
+             &pm[parent_ppn << PHYSICAL_PAGE_OFFSET_LENGTH], PAGE_SIZE);
+      return 1;
+    }
+  }
 
-int enough_frame(int request_num) {return 0;}
+  return 0;
+}
+
+int enough_frame(int request_num) {
+  int free_num = 0;
+  for (int i = 0;i < MAX_NUM_PHYSICAL_PAGE;++i) {
+    if (page_map[i].allocated == 0) {
+      free_num += 1;
+    }
+  }
+  if (request_num <= free_num) {
+    return 1;
+  } else {
+    return 0;
+  }
+}

@@ -6,7 +6,7 @@
 extern uint64_t heap_start_vaddr;
 extern uint64_t heap_end_vaddr;
 
-#define HEAP_MAX_SIZE (4096 * 16)
+#define HEAP_MAX_SIZE (2 << 20)
 
 extern uint8_t heap[HEAP_MAX_SIZE];
 
@@ -55,6 +55,7 @@ void set_field32_block_ptr(uint64_t header_vaddr, uint64_t block_ptr, uint32_t m
 // interface
 int heap_init();
 uint64_t mem_alloc(uint32_t size);
+uint64_t mem_aligned_alloc(uint32_t size, uint64_t aligned);
 void mem_free(uint64_t payload_vaddr);
 
 #endif // ALLOCATOR_H_

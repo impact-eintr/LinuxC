@@ -10,6 +10,7 @@
 
 //#define KERNEL_malloc malloc
 #define KERNEL_malloc mem_alloc
+#define KERNEL_algined_alloc mem_aligned_alloc
 
 typedef struct STRUCT_TRAPFRAME{
   // error code

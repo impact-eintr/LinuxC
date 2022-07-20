@@ -46,6 +46,39 @@ uint64_t implicit_list_search_free_block(uint32_t payload_size, uint32_t *alloc_
   return NIL;
 }
 
+// TODO KERNEL_ALIGNED_ALLOC
+uint64_t implicit_list_search_free_aligned_block(uint32_t payload_size,
+                                                 uint32_t *alloc_blocksize,
+                                                 uint64_t aligned) {
+  // search 8-byte block list
+  if (payload_size <= 4 && small_list.count != 0) {
+    *alloc_blocksize = 8;
+    return small_list.head;
+  }
+
+  uint32_t free_blocksize = round_up(payload_size, 8) + 4 + 4;
+  *alloc_blocksize = free_blocksize;
+
+  // search the whole heap
+  uint64_t b = get_firstblock();
+  while(b <= get_lastblock()) {
+    uint32_t b_blocksize = get_blocksize(b);
+    uint32_t b_allocated = get_allocated(b);
+    uint64_t addr = (uint64_t)&heap[b];
+    uint64_t aligned_addr = round_up(addr, aligned);
+      uint64_t offset = aligned_addr - addr;
+      printf("blocksize: %x offset : %lx\n",b_blocksize , offset);
+    if (b_allocated == FREE &&
+        free_blocksize <= b_blocksize - offset) {
+      printf("aligned: %lx addr: %lx a : %lx\n", aligned, addr, aligned_addr);
+      return b;
+    } else {
+      b = get_nextheader(b);
+    }
+  }
+  return NIL;
+}
+
 int implicit_list_insert_free_block(uint64_t free_header) {
   assert(free_header % 8 == 4);
   assert(get_firstblock() <= free_header && free_header <= get_lastblock());

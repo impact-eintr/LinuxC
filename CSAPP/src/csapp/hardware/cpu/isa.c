@@ -164,11 +164,29 @@ void cmp_handler(od_t *src_od, od_t *dst_od) {
 
     increase_pc();
     return;
+  } else if (src_od->type == OD_IMM && dst_od->type == OD_REG) {
+    uint64_t dval = dst_od->value;
+    uint64_t val = dval + (~(src_od->value) + 1);
+
+    int val_sign = ((val >> 63) & 0x1);
+    int src_sign = (((src_od->value) >> 63) & 0x1);
+    int dst_sign = ((dval >> 63) & 0x1);
+
+    // set condition flags
+    cpu_flags.CF = (val > dval);
+    cpu_flags.ZF = (val == 0);
+    cpu_flags.SF = val_sign;
+    cpu_flags.OF = (src_sign == 1 && dst_sign == 0 && val_sign == 1) ||
+      (src_sign == 0 && dst_sign == 1 && val_sign == 0);
+
+    increase_pc();
+    return;
   }
 }
 
 void jne_handler(od_t *src_od, od_t *dst_od) {
   if (cpu_flags.ZF == 0) {
+    printf("JUMP\n");
     cpu_pc.rip = (src_od->value);
   } else {
     increase_pc();
@@ -239,10 +257,6 @@ void instruction_cycle() {
   uint64_t pc_pa = va2pa(cpu_pc.rip);
   cpu_readinst_dram(pc_pa, inst_str);
 
-#ifdef DEBUG_INSTRUCTION_CYCLE
-  printf("EXECUTE INSTRUCTION %8lx       %s\n", cpu_pc.rip, inst_str);
-#endif
-
   // DECODE: decode the run-time instruction operands
   inst_t inst;
   parse_instruction(inst_str, &inst);
@@ -250,6 +264,10 @@ void instruction_cycle() {
   // EXECUTE: get the funtion pointer of handler by the operator
   //          update  CPU and Memory  according the instruction
   inst.op(&(inst.src), &(inst.dst));
+
+#ifdef DEBUG_INSTRUCTION_CYCLE
+  printf("EXECUTE INSTRUCTION %8lx       %s END\n", cpu_pc.rip, inst_str);
+#endif
 
   // check timer interrupt from APIC
   if ((global_time % timer_period) == 0) {

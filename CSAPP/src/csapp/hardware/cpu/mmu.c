@@ -125,7 +125,7 @@ static int write_tlb(uint64_t vaddr_value, uint64_t paddr_value,
     return 1;
   }
   // no free TLB cache line, select on DRAM victim
-  int random_victim_index = random() % NUM_TLB_CACHE_LINE_PER_SET;
+  int random_victim_index = rand() % NUM_TLB_CACHE_LINE_PER_SET;
   tlb_cacheline_t *line = &set->lines[random_victim_index];
   line->valid = 1;
   line->ppn = paddr.ppn;
