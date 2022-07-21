@@ -104,7 +104,7 @@ static void TestFork() {
     "movq   %rsp, %rsi",
     "movq   $6, %rdx",
     "int    $0x80",
-    "jmp    $0x00400180",
+    "jmp    $0x00400200",
     // LOOP: parent
     // parent LOOP: print parent
     "movq   $0x0a746e65726170, %rbx", // 0x00400380
@@ -114,7 +114,7 @@ static void TestFork() {
     "movq   %rsp, %rsi",
     "movq   $7, %rdx",
     "int    $0x80",
-    "jmp    $0x00400380",
+    "jmp    $0x00400400",
   };
   memcpy(
     (char *)(&pm[0 + code_addr.ppo]),
