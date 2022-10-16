@@ -20,6 +20,20 @@ typedef struct STRUCT_PROCESS_CONTEXT {
   cpu_flags_t flags;
 } context_t;
 
+typedef struct VIRTUAL_MEMORY_AREA_STRUCT {
+  struct VIRTUAL_MEMORY_AREA_STRUCT *prev;
+  struct VIRTUAL_MEMORY_AREA_STRUCT *next;
+  uint64_t vma_start;
+  uint64_t vma_end;
+  struct {
+    uint64_t read : 1;
+    uint64_t write : 1;
+    uint64_t execute : 1;
+    uint64_t private : 1;
+  } vma_mode;
+  char filepath[128];
+} vm_area_struct;
+
 typedef struct PROCESS_CONTROL_BLOCK_STRUCT {
   uint64_t pid;
 

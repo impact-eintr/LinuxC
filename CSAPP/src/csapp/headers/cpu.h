@@ -208,6 +208,10 @@ void instruction_cycle();
 // global mmu pagefault virtual address
 extern uint64_t mmu_vaddr_pagefault;
 
+#if defined(USE_TLB_HARDWARE) && defined(USE_PAGETABLE_VA2PA)
+void flush_tlb();
+#endif
+
 uint64_t va2pa(uint64_t vaddr);
 
 #endif
