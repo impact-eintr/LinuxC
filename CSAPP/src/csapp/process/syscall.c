@@ -37,13 +37,13 @@ static void destrory_user_registers() {
 
 // initialize of IDT
 void syscall_init() {
-  syscall_table[01].handler = write_handler;
-  syscall_table[39].handler = getpid_handler;
-  syscall_table[57].handler = fork_handler;
-  syscall_table[59].handler = execve_handler;
-  syscall_table[60].handler = exit_handler;
-  syscall_table[61].handler = wait_handler;
-  syscall_table[62].handler = kill_handler;
+  syscall_table[0x01].handler = write_handler;
+  syscall_table[0x27].handler = getpid_handler;
+  syscall_table[0x39].handler = fork_handler;
+  syscall_table[0x3b].handler = execve_handler;
+  syscall_table[0x3c].handler = exit_handler;
+  syscall_table[0x3d].handler = wait_handler;
+  syscall_table[0x3e].handler = kill_handler;
 }
 
 static void write_handler() {

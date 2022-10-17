@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -146,42 +147,30 @@ void sub_handler(od_t *src_od, od_t *dst_od) { // sub $0x1234, %rax
 }
 
 void cmp_handler(od_t *src_od, od_t *dst_od) {
+  uint64_t val, dval;
   if (src_od->type == OD_IMM && dst_od->type == OD_MEM) {
+    // src: register (value: int_t bit map)
+    // dst: register (value: int_t bit map)
     uint64_t dst_pa = va2pa(dst_od->value);
-    uint64_t dval = cpu_read64bits_dram(dst_pa);
-    uint64_t val = dval + (~(src_od->value) + 1);
-
-    int val_sign = ((val >> 63) & 0x1);
-    int src_sign = (((src_od->value) >> 63) & 0x1);
-    int dst_sign = ((dval >> 63) & 0x1);
-
-    // set condition flags
-    cpu_flags.CF = (val > dval);
-    cpu_flags.ZF = (val == 0);
-    cpu_flags.SF = val_sign;
-    cpu_flags.OF = (src_sign == 1 && dst_sign == 0 && val_sign == 1) ||
-      (src_sign == 0 && dst_sign == 1 && val_sign == 0);
-
-    increase_pc();
-    return;
+    dval = cpu_read64bits_dram(dst_pa);
   } else if (src_od->type == OD_IMM && dst_od->type == OD_REG) {
-    uint64_t dval = *(uint64_t*)(dst_od->value);
-    uint64_t val = dval + (~(src_od->value) + 1);
-
-    int val_sign = ((val >> 63) & 0x1);
-    int src_sign = (((src_od->value) >> 63) & 0x1);
-    int dst_sign = ((dval >> 63) & 0x1);
-
-    // set condition flags
-    cpu_flags.CF = (val > dval);
-    cpu_flags.ZF = (val == 0);
-    cpu_flags.SF = val_sign;
-    cpu_flags.OF = (src_sign == 1 && dst_sign == 0 && val_sign == 1) ||
-      (src_sign == 0 && dst_sign == 1 && val_sign == 0);
-
-    increase_pc();
-    return;
+    dval = *(uint64_t*)(dst_od->value);
   }
+
+  val = dval + (~(src_od->value) + 1);
+  int val_sign = ((val >> 63) & 0x1);
+  int src_sign = (((src_od->value) >> 63) & 0x1);
+  int dst_sign = ((dval >> 63) & 0x1);
+
+  // set condition flags
+  cpu_flags.CF = (val > dval);
+  cpu_flags.ZF = (val == 0);
+  cpu_flags.SF = val_sign;
+  cpu_flags.OF = (src_sign == 1 && dst_sign == 0 && val_sign == 1) ||
+                 (src_sign == 0 && dst_sign == 1 && val_sign == 0);
+
+  increase_pc();
+  return;
 }
 
 void jne_handler(od_t *src_od, od_t *dst_od) {
@@ -238,7 +227,7 @@ void parse_instruction(char *inst_str, inst_t *inst);
 
 // tiem, the craft of god
 static uint64_t global_time = 0;
-static uint64_t timer_period = 5;
+static uint64_t timer_period = 5000000;
 
 #define DEBUG_INSTRUCTION_CYCLE
 // instruction sycle is implement in cpu
@@ -257,7 +246,7 @@ void instruction_cycle() {
   cpu_readinst_dram(pc_pa, inst_str);
 
 #ifdef DEBUG_INSTRUCTION_CYCLE
-  printf("EXECUTE INSTRUCTION %8lx       %s\n", cpu_pc.rip, inst_str);
+  printf("[%4ld] %8lx       %s\n", global_time, cpu_pc.rip, inst_str);
 #endif
 
   // DECODE: decode the run-time instruction operands

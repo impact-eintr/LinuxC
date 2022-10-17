@@ -76,7 +76,7 @@ FSRC    = $(ALGO)/hashtable.c $(ALGO)/trie.c \
 					$(PROC)/syscall.c $(PROC)/pagefault.c $(PROC)/schedule.c $(PROC)/fork.c
 
 fork:
-	$(CC) $(COMMON)/convert.c $(FSRC) $(MSRC) $(IM) test_fork.c $(CFLAGS) -o test
+	$(CC) $(COMMON)/convert.c $(FSRC) $(MSRC) $(IM) test_fork.c $(CFLAGS) -DUSE_PAGETABLE_VA2PA -DUSE_TLB_HARDWARE -o test
 	./test
 
 

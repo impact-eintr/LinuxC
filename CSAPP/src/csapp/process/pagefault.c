@@ -202,7 +202,7 @@ void fix_pagefault() {
   printf("\033[34;1m\tPageFault: write back & use ppn %d\033[0m\n", lru_ppn);
 }
 
-int copy_userframe(pte4_t *child_pte, uint64_t parent_ppn) {
+int copy_physicalframe(pte4_t *child_pte, uint64_t parent_ppn) {
   assert(0 <= parent_ppn && parent_ppn < MAX_NUM_PHYSICAL_PAGE);
   for (int i = 0; i < MAX_NUM_PHYSICAL_PAGE; ++ i)
   {

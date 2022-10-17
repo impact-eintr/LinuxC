@@ -39,4 +39,9 @@ void os_schedule() {
   tr_global_tss.ESP0 = get_kstack_RSP() + KERNEL_STACK_SIZE;
   // flush mmu and tlb
   cpu_controls.cr3 = (uint64_t)(pcb_new->mm.pgd);
+//#define USE_PAGETABLE_VA2PA
+//#define USE_TLB_HARDWARE
+#if defined(USE_TLB_HARDWARE) && defined(USE_PAGETABLE_VA2PA)
+  flush_tlb();
+#endif
 }

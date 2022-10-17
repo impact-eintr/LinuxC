@@ -46,6 +46,7 @@ static void TestFork() {
   cpu_reg.rsp = 0x7ffffffee0f0;
 
   address_t code_addr = {.address_value = cpu_pc.rip};
+  address_t stack_addr = {.address_value = cpu_reg.rsp};
 
   page_map_init();
 
@@ -71,10 +72,20 @@ static void TestFork() {
   memset(&p1_pt, 0, sizeof(pte4_t) * 512);
   link_page_table(&p1_pgd[0], &p1_pud[0], &p1_pmd[0], &p1_pt[0], 0, &code_addr);
 
+  // prepare user mode stack frame
+  pte123_t p1_pud_stack[512];
+  pte123_t p1_pmd_stack[512];
+  pte4_t p1_pt_stack[512];
+  memset(&p1_pud_stack, 0, sizeof(pte123_t) * 512);
+  memset(&p1_pmd_stack, 0, sizeof(pte123_t) * 512);
+  memset(&p1_pt_stack, 0, sizeof(pte4_t) * 512);
+  link_page_table(&p1_pgd[0], &p1_pud_stack[0], &p1_pmd_stack[0],
+                  &p1_pt_stack[0], 1, &stack_addr);
+
   // create kernel stacks for trap into kernel
-  uint8_t stack_buf[8192 * 2];
-  uint64_t p1_stack_bottom = (((uint64_t)&stack_buf[8192]) >> 13) << 13;
-  p1.kstack = (kstack_t *)p1_stack_bottom;
+  kstack_t *stack_buf = aligned_alloc(KERNEL_STACK_SIZE, KERNEL_STACK_SIZE);
+  uint64_t p1_stack_bottom = (uint64_t)stack_buf;
+  p1.kstack = stack_buf;
   p1.kstack->threadinfo.pcb = &p1;
 
   // run p1
@@ -117,11 +128,11 @@ static void TestFork() {
     "jmp    $0x00400400",
   };
   memcpy(
-    (char *)(&pm[0 + code_addr.ppo]),
+    (char *)(&pm[0]),
     &code, sizeof(char) * 22 * MAX_INSTRUCTION_CHAR);
 
   // this should trigger page fault
-  for (int i = 0; i < 100; ++i)
+  for (int i = 0; i < 30; ++i)
   {
     instruction_cycle();
   }

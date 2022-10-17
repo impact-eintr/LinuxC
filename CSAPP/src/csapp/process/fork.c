@@ -12,14 +12,26 @@
 #include "../headers/process.h"
 
 // from page fault
-int copy_userframe(pte4_t *child_pte, uint64_t parent_ppn);
+int copy_physicalframe(pte4_t *child_pte, uint64_t parent_ppn);
 int enough_frame(int request_num);
 
-static uint64_t fork_naive_copy();
-static uint64_t fork_cow();
+static pcb_t* fork_naive_copy(pcb_t *parent_pcb);
+static pcb_t* fork_cow(pcb_t *parent_pcb);
 
+#define DUSE_FORK_NATIVE_COPY
 uint64_t syscall_fork() {
-  return fork_naive_copy();
+  pcb_t *parent = get_current_pcb();
+  pcb_t *child = NULL;
+
+#if defined(DUSE_FORK_NATIVE_COPY)
+  child = fork_naive_copy(parent);
+#elif defined(DUSE_FORK_COW)
+  child = fork_cow(parent);
+#endif
+  if (child == NULL) {
+    return 0;
+  }
+  return 1;
 }
 
 // Implementaion
@@ -53,18 +65,6 @@ static pte123_t *copy_pagetable(pte123_t *src, int level) {
   memcpy(dst, src, sizeof(pte123_t) * PAGE_TABLE_ENTRY_NUM);
 
   if (level == 4) {
-    pte4_t *parent_pt = (pte4_t *)src;
-    pte4_t *child_pt = (pte4_t *)dst;
-
-    // copy user frames here
-    for (int j = 0; j < PAGE_TABLE_ENTRY_NUM; ++j) {
-      if (parent_pt[j].present == 1) {
-        // copy the physical frame to child
-        int copy_ = copy_userframe(&child_pt[j], parent_pt[j].ppn);
-        assert(copy_ == 1);
-      }
-    }
-
     return dst;
   }
 
@@ -77,6 +77,33 @@ static pte123_t *copy_pagetable(pte123_t *src, int level) {
   }
 
   return dst;
+}
+
+static void copy_userframes(pte123_t *src, pte123_t *dst, int level) {
+  if (level == 4) {
+    pte4_t *parent_pt = (pte4_t *)src;
+    pte4_t *child_pt = (pte4_t *)dst;
+
+    // copy user frames here
+    for (int j = 0; j < PAGE_TABLE_ENTRY_NUM; ++j) {
+      if (parent_pt[j].present == 1) {
+        // copy the physical frame to child
+        int copy_ = copy_physicalframe(&child_pt[j], parent_pt[j].ppn);
+        assert(copy_ == 1);
+      }
+    }
+
+    return;
+  }
+
+  // DFS to go down
+  for (int i = 0;i < PAGE_TABLE_ENTRY_NUM;++i) {
+    if (src[i].present == 1) {
+      pte123_t *src_next = (pte123_t *)(uint64_t)(src[i].paddr);
+      pte123_t *dst_next = (pte123_t *)(uint64_t)(dst[i].paddr);
+      copy_userframes(src_next, dst_next, level+1);
+    }
+  }
 }
 
 static int get_childframe_num(pte123_t *p, int level) {
@@ -126,17 +153,12 @@ static int compare_pagetables(pte123_t *p, pte123_t *q, int level) {
   return 1;
 }
 
-static uint64_t fork_naive_copy() {
-  pcb_t *parent_pcb = get_current_pcb();
-
-  int needed_userframe_num = get_childframe_num(parent_pcb->mm.pgd, 1);
-  if (enough_frame(needed_userframe_num) == 0) {
-    // there is no enough frames for child process to use
-    update_userframe_returnvalue(parent_pcb, -1);
-    return -1;
-  }
-
+static pcb_t *copy_pcb(pcb_t *parent_pcb) {
+  //ATTENTION HERE!!!
   pcb_t *child_pcb = (pcb_t *)&heap[KERNEL_malloc(sizeof(pcb_t))];
+  if (child_pcb == NULL) {
+    return NULL;
+  }
   //pcb_t *child_pcb = KERNEL_malloc(sizeof(pcb_t));
   memcpy(child_pcb, parent_pcb, sizeof(pcb_t));
 
@@ -171,10 +193,30 @@ static uint64_t fork_naive_copy() {
 
   // copy the entire page table of parent
   child_pcb->mm.pgd = copy_pagetable(parent_pcb->mm.pgd, 1);
-  assert(compare_pagetables(child_pcb->mm.pgd, parent_pcb->mm.pgd, 1) == 1);
 
   // All copy works are done here
-  return 0;
+  return child_pcb;
 }
 
-static uint64_t fork_cow() { return 0; }
+static pcb_t* fork_naive_copy(pcb_t *parent_pcb) {
+  //check memory size because we directly copy the physical frames
+  int needed_userfrane_num =
+    get_childframe_num(parent_pcb->mm.pgd, 1);
+
+  if (enough_frame(needed_userfrane_num) == 0) {
+    // there are no enough frames for child process to use
+    update_userframe_returnvalue(parent_pcb, -1);
+    return NULL;
+  }
+
+  pcb_t *child_pcb = copy_pcb(parent_pcb);
+  assert(child_pcb != NULL);
+
+  // directly copy user frames in mian memory now
+  copy_userframes(child_pcb->mm.pgd, parent_pcb->mm.pgd, 1);
+  assert(compare_pagetables(child_pcb->mm.pgd, parent_pcb->mm.pgd, 1) == 1);
+
+  return child_pcb;
+}
+
+static pcb_t* fork_cow(pcb_t *parent_pcb) { return 0; }

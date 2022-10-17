@@ -248,7 +248,7 @@ void pagefault_handler() {
 }
 
 void syscall_handler() {
-  printf("\033[32;1mInvoking system call [%ld]\033[0m\n", cpu_reg.rax);
+  printf("\033[32;1mInvoking system call [%lx]\033[0m\n", cpu_reg.rax);
 
   // push user general registers to kernel stack
   // to save the context of user thread
