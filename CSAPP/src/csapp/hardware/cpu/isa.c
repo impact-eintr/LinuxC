@@ -17,30 +17,27 @@ static inline void increase_pc() {
 
 void mov_handler(od_t *src_od, od_t *dst_od) {
   if (src_od->type == OD_REG && dst_od->type == OD_REG) { // mov %rax,%rdi
-    *(uint64_t*)(dst_od->value) = *(uint64_t*)(src_od->value);
+    DEREF_VALUE(dst_od) = DEREF_VALUE(src_od);
     increase_pc();
     cpu_flags.__flags_value = 0;
     return;
   } else if (src_od->type == OD_REG && dst_od->type == OD_MEM) { // mov %rax,(%rdi)
-    uint64_t dst_pa = va2pa(dst_od->value);
-    cpu_write64bits_dram(dst_pa, *(uint64_t*)(src_od->value));
+    virtual_write_data(dst_od->value, DEREF_VALUE(src_od));
     increase_pc();
     cpu_flags.__flags_value = 0;
     return;
   } else if (src_od->type == OD_MEM && dst_od->type == OD_REG) { // mov (%rax),%rdi
-    uint64_t src_pa = va2pa(src_od->value);
-    *(uint64_t*)(dst_od->value) = cpu_read64bits_dram(src_pa);
+    DEREF_VALUE(dst_od) = virtual_read_data(src_od->value);
     increase_pc();
     cpu_flags.__flags_value = 0;
     return;
   } else if (src_od->type == OD_IMM && dst_od->type == OD_REG) { // mov $0x1234,%rax
-    *(uint64_t*)(dst_od->value) = (src_od->value);
+    DEREF_VALUE(dst_od) = (src_od->value);
     increase_pc();
     cpu_flags.__flags_value = 0;
     return;
   } else if (src_od->type == OD_IMM && dst_od->type == OD_MEM) { // mov $0x1234,(%rax)
-    uint64_t dst_pa = va2pa(src_od->value);
-    cpu_write64bits_dram(dst_pa, src_od->value);
+    virtual_write_data(cpu_reg.rsp, DEREF_VALUE(src_od));
     increase_pc();
     cpu_flags.__flags_value = 0;
     return;

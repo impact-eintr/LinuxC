@@ -210,6 +210,6 @@ extern uint64_t mmu_vaddr_pagefault;
 
 void flush_tlb();
 
-uint64_t va2pa(uint64_t vaddr);
+uint64_t va2pa(uint64_t vaddr, int write_request);
 
 #endif

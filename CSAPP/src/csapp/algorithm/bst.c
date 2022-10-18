@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "../headers/algorithm.h"
+#include "../headers/color.h"
 #include "../headers/common.h"
 
 // We should know that "i_node" is only used for performance polymorphism
@@ -359,7 +360,7 @@ static void bst_internal_dfs_print(uint64_t node, rbtree_node_interface *i_node,
   }
 
   if (i_node->get_color(node) == COLOR_RED) {
-    printf("(0x%lx/%lu:\033[31m%lu\033[0m,", node, node, i_node->get_key(node));
+    printf("(0x%lx/%lu:"REDSTR("%lu")",", node, node, i_node->get_key(node));
   } else {
     printf("(0x%lx/%lu:%lu,", node, node, i_node->get_key(node));
   }

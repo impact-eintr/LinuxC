@@ -8,7 +8,6 @@
 #include "../../headers/cpu.h"
 #include "../../headers/memory.h"
 
-#define USE_PAGETABLE_VA2PA
 #define USE_SRAM_CACHE
 
 uint8_t pm[PHYSICAL_MEMORY_SPACE];
@@ -23,6 +22,27 @@ void pagemap_update_time(uint64_t paddr);
 void pagemap_dirty(uint64_t ppn);
 #endif
 
+
+uint64_t virtual_read_data(uint64_t vaddr) {
+  uint64_t paddr = va2pa(vaddr, 0);
+  uint64_t data = cpu_read64bits_dram(paddr);
+  return data;
+}
+
+void virtual_write_data(uint64_t vaddr, uint64_t data) {
+  uint64_t paddr = va2pa(vaddr, 1);
+  cpu_write64bits_dram(paddr, data);
+}
+
+void virtual_read_inst(uint64_t vaddr, char *buf) {
+  uint64_t paddr = va2pa(vaddr, 0);
+  cpu_readinst_dram(paddr, buf);
+}
+
+void virtual_write_inst(uint64_t vaddr, const char *str) {
+  uint64_t paddr = va2pa(vaddr, 1);
+  cpu_writeinst_dram(paddr, str);
+}
 
 uint8_t cpu_read8bits_dram(uint64_t paddr) {
   uint64_t val = 0x0;

@@ -1,6 +1,7 @@
 #ifndef MEMORY_H_
 #define MEMORY_H_
 
+#include <cstdint>
 #include <stdint.h>
 
 #define PHYSICAL_MEMORY_SPACE (65536)
@@ -63,6 +64,12 @@ typedef union {
 /*======================================*/
 /*      memory R/W                      */
 /*======================================*/
+
+// used by instructions: use virtual address
+uint64_t virtual_read_data(uint64_t vaddr);
+void virtual_write_data(uint64_t vaddr, uint64_t data);
+void virtual_read_inst(uint64_t vaddr, char *buf);
+void virtual_write_inst(uint64_t vaddr, const char *str);
 
 // used by instructions: read or write uint8_t to DRAM
 uint8_t cpu_read8bits_dram(uint64_t paddr);

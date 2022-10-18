@@ -18,14 +18,15 @@ int enough_frame(int request_num);
 static pcb_t* fork_naive_copy(pcb_t *parent_pcb);
 static pcb_t* fork_cow(pcb_t *parent_pcb);
 
-#define DUSE_FORK_NATIVE_COPY
+#define USE_FORK_NATIVE_COPY
+//#define USE_FORK_COW
 uint64_t syscall_fork() {
   pcb_t *parent = get_current_pcb();
   pcb_t *child = NULL;
 
-#if defined(DUSE_FORK_NATIVE_COPY)
+#if defined(USE_FORK_NATIVE_COPY)
   child = fork_naive_copy(parent);
-#elif defined(DUSE_FORK_COW)
+#elif defined(USE_FORK_COW)
   child = fork_cow(parent);
 #endif
   if (child == NULL) {
@@ -57,6 +58,41 @@ void update_userframe_returnvalue(pcb_t *p, uint64_t retval) {
   uf->regs.rax = retval;
 }
 
+static void copy_vmareas(pcb_t *src, pcb_t *dst) {
+#ifdef USE_FORK_COW
+  assert(src != NULL && dst != NULL);
+
+  dst->mm.vma.head = 0;
+  dst->mm.vma.count = 0;
+  dst->mm.vma.update_head = src->mm.vma.update_head;
+
+  if (src->mm.vma.count == 0) {
+    return;
+  }
+
+  vm_area_t *src_vma = (vm_area_t *)src->mm.vma.head;
+  for (int i = 0;i < src->mm.vma.count;++i) {
+    vm_area_t *dst_vma = (vm_area_t *)&heap[KERNEL_malloc(sizeof(vm_area_t))];
+    dst_vma->vma_start = src_vma->vma_start;
+    dst_vma->vma_end = src_vma->vma_end;
+    dst_vma->mode_value = src_vma->mode_value;
+    strcpy(dst_vma->filepath, src_vma->filepath);
+    dst_vma->rbt_color = src_vma->rbt_color;
+
+    // update the shared bit in vma mode
+    src_vma->vma_mode.private = 0;
+    dst_vma->vma_mode.private = 0;
+
+    // add the virtual memory area to child process
+    vma_add_area(dst, dst_vma);
+
+    // move to next vma in parent
+    src_vma = src_vma->next;
+  }
+  assert(dst->mm.vma.count == src->mm.vma.count);
+#endif
+}
+
 static pte123_t *copy_pagetable(pte123_t *src, int level) {
   // allocate one page for destination
   pte123_t *dst = (pte123_t *)&heap[KERNEL_malloc(sizeof(pte123_t) * PAGE_TABLE_ENTRY_NUM)];
@@ -65,6 +101,19 @@ static pte123_t *copy_pagetable(pte123_t *src, int level) {
   memcpy(dst, src, sizeof(pte123_t) * PAGE_TABLE_ENTRY_NUM);
 
   if (level == 4) {
+#ifdef USE_FORK_COW
+    // copy on write
+    // set the all pte4 to be read only
+    for (int j = 0;j < PAGE_TABLE_ENTRY_NUM;++j) {
+      if (dst[j].present == 1) {
+        // This is a valid pte4
+        pte4_t *pte = (pte4_t *)&dst[j];
+        pte->readonly = 1;
+        (&src[j])->readonly = 1;
+        // TODO update page_map.count
+      }
+    }
+#endif
     return dst;
   }
 
@@ -92,10 +141,8 @@ static void copy_userframes(pte123_t *src, pte123_t *dst, int level) {
         assert(copy_ == 1);
       }
     }
-
     return;
   }
-
   // DFS to go down
   for (int i = 0;i < PAGE_TABLE_ENTRY_NUM;++i) {
     if (src[i].present == 1) {
@@ -193,6 +240,9 @@ static pcb_t *copy_pcb(pcb_t *parent_pcb) {
 
   // copy the entire page table of parent
   child_pcb->mm.pgd = copy_pagetable(parent_pcb->mm.pgd, 1);
+
+  // copy virtual memory areas
+  copy_vmareas(parent_pcb, child_pcb);
 
   // All copy works are done here
   return child_pcb;
