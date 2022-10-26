@@ -235,7 +235,7 @@ int copy_physicalframe(pte4_t *child_pte, uint64_t parent_ppn) {
   // TODO && FIXME : parent_ppn my be evicted
   // So we should fail the fork
 
-  return 0;
+  return 1;
 }
 
 int enough_frame(int request_num) {

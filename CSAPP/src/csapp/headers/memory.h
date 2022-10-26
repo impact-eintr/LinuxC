@@ -1,7 +1,6 @@
 #ifndef MEMORY_H_
 #define MEMORY_H_
 
-#include <cstdint>
 #include <stdint.h>
 
 #define PHYSICAL_MEMORY_SPACE (65536)

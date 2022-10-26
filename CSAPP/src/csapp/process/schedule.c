@@ -7,6 +7,7 @@
 #include "../headers/interrupt.h"
 #include "../headers/memory.h"
 #include "../headers/process.h"
+#include "../headers/color.h"
 
 pcb_t *get_current_pcb() {
   kstack_t *ks = (kstack_t *)get_kstack_RSP();
@@ -30,18 +31,18 @@ static void restore_context(pcb_t *proc) {
 void os_schedule() {
   pcb_t *pcb_old = get_current_pcb();
   pcb_t *pcb_new = pcb_old->next;
-  printf("\t\033[31;1mOS schedule [%ld] -> [%ld]\033[0m\n", pcb_old->pid, pcb_new->pid);
+  printf(REDSTR("\tOS schedule [%ld] -> [%ld]\n"), pcb_old->pid, pcb_new->pid);
 
   store_context(pcb_old);
 
   restore_context(pcb_new);
 
   tr_global_tss.ESP0 = get_kstack_RSP() + KERNEL_STACK_SIZE;
-  // flush mmu and tlb
   cpu_controls.cr3 = (uint64_t)(pcb_new->mm.pgd);
-//#define USE_PAGETABLE_VA2PA
-//#define USE_TLB_HARDWARE
+  // flush mmu and tlb
 #if defined(USE_TLB_HARDWARE) && defined(USE_PAGETABLE_VA2PA)
-  flush_tlb();
+  if (pcb_old->mm.pgd != pcb_new->mm.pgd) {
+    flush_tlb();
+  }
 #endif
 }

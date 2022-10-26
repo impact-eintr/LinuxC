@@ -12,6 +12,7 @@
 #include "../headers/address.h"
 #include "../headers/memory.h"
 #include "../headers/process.h"
+#include "../headers/color.h"
 
 void map_pte4(pte4_t *pte, uint64_t ppn);
 void unmap_pte4(uint64_t ppn);
@@ -137,7 +138,7 @@ static void TestFork() {
     instruction_cycle();
   }
 
-  printf("\033[32;1m\tPass\033[0m\n");
+  printf(GREENSTR("\tPass\n"));
 }
 
 int main() {

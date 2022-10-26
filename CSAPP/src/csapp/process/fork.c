@@ -14,6 +14,7 @@
 // from page fault
 int copy_physicalframe(pte4_t *child_pte, uint64_t parent_ppn);
 int enough_frame(int request_num);
+void map_pte4(pte4_t *pte, uint64_t ppn);
 
 static pcb_t* fork_naive_copy(pcb_t *parent_pcb);
 static pcb_t* fork_cow(pcb_t *parent_pcb);

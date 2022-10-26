@@ -10,12 +10,16 @@
 #include "../../headers/cpu.h"
 #include "../../headers/interrupt.h"
 #include "../../headers/memory.h"
+#include "../../headers/color.h"
 
 // ----------------------------- //
 //  Translation Lookaside Buffer
 // ----------------------------- //
 
 #define NUM_TLB_CACHE_LINE_PER_SET (8)
+#ifndef USE_PAGETABLE_VA2PA
+#define USE_PAGETABLE_VA2PA
+#endif
 
 cpu_cr_t cpu_controls;
 
@@ -36,7 +40,7 @@ typedef struct {
 
 static tlb_cache_t mmu_tlb;
 
-static uint64_t page_walk(uint64_t vaddr_value);
+static uint64_t page_walk(uint64_t vaddr_value, int write_request);
 static void page_fault_handler(pte4_t *pte, address_t vaddr);
 
 static int read_tlb(uint64_t vaddr_value, uint64_t *paddr_value_ptr,
@@ -44,7 +48,9 @@ static int read_tlb(uint64_t vaddr_value, uint64_t *paddr_value_ptr,
 static int write_tlb(uint64_t vaddr_value, uint64_t paddr_value,
                      int free_tlb_line_index);
 
-uint64_t va2pa(uint64_t vaddr) {
+// vaddr - the virtual address to be translated into physical address
+// write_request - if this translation is caused by write request
+uint64_t va2pa(uint64_t vaddr, int write_request) {
 #ifdef USE_NAVIE_VA2PA
   return vaddr % PHYSICAL_MEMORY_SPACE;
 #endif
@@ -60,7 +66,7 @@ uint64_t va2pa(uint64_t vaddr) {
 #endif
 
 #ifdef USE_PAGETABLE_VA2PA
-  paddr = page_walk(vaddr);
+  paddr = page_walk(vaddr, write_request);
 #endif
 
 #if defined(USE_TLB_HARDWARE) && defined(USE_PAGETABLE_VA2PA)
@@ -136,7 +142,7 @@ void flush_tlb() {
 #ifdef USE_PAGETABLE_VA2PA
 // input virtual address
 // output physics address
-static uint64_t page_walk(uint64_t vaddr_value) {
+static uint64_t page_walk(uint64_t vaddr_value, int write_request) {
   // parse address
   address_t vaddr = {.vaddr_value = vaddr_value};
   int vpns[4] = {
@@ -161,8 +167,7 @@ static uint64_t page_walk(uint64_t vaddr_value) {
     int vpn = vpns[level];
     if (tab[vpn].present != 1) {
       // page fault
-      printf("\033[31;1mMMU (%lx): level %d page fault: [%x].present ==  "
-             "0\n\033[0m",
+      printf(REDSTR("MMU (%lx): level %d page fault: [%x].present ==  0\n"),
              vaddr_value, level + 1, vpn);
       goto PAISE_PAGE_FAULT;
     }
@@ -175,13 +180,14 @@ static uint64_t page_walk(uint64_t vaddr_value) {
     // find page table entry
     address_t paddr = {.ppn = pte->ppn, .ppo = vpo};
     // TODO
-    if (pte->readonly == 1) {
+    if (pte->readonly == 1 && write_request) {
+      printf(REDSTR("\tProtection Fault\n"));
       goto PAISE_PAGE_FAULT;
     }
     return paddr.paddr_value;
   } else {
     printf(
-        "\033[31;1mMMU (%lx): level 4 page fault: [%x].present == 0\n\033[0m",
+        REDSTR("MMU (%lx): level 4 page fault: [%x].present == 0\n"),
         vaddr_value, vaddr.vpn4);
   }
 PAISE_PAGE_FAULT:

@@ -9,6 +9,7 @@
 #include "../headers/interrupt.h"
 #include "../headers/memory.h"
 #include "../headers/syscall.h"
+#include "../headers/color.h"
 
 typedef void (*syscall_handler_t)();
 
@@ -58,7 +59,7 @@ static void write_handler() {
 
   for (int i = 0; i < buf_length; ++i) {
     // printf as yellow
-    uint64_t pc_pa = va2pa(buf_vaddr + i);
+    uint64_t pc_pa = va2pa(buf_vaddr + i, 0);
     printf("\033[35;1m%c\033[0m", cpu_read8bits_dram(pc_pa));
   }
 }
