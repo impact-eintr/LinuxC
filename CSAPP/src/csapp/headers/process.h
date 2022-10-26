@@ -24,8 +24,8 @@ typedef struct STRUCT_PROCESS_CONTEXT {
 typedef struct VIRTUAL_MEMORY_AREA_STRUCT {
   struct VIRTUAL_MEMORY_AREA_STRUCT *prev;
   struct VIRTUAL_MEMORY_AREA_STRUCT *next;
-  uint64_t vma_start;
-  uint64_t vma_end;
+  uint64_t vma_start; // 第一个属于该vma的地址
+  uint64_t vma_end; // 第一个不属于该vma的地址
   union {
     uint64_t mode_value;
     struct {

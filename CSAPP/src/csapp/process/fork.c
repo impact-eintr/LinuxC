@@ -96,7 +96,7 @@ static void copy_vmareas(pcb_t *src, pcb_t *dst) {
 
 static pte123_t *copy_pagetable(pte123_t *src, int level) {
   // allocate one page for destination
-  pte123_t *dst = (pte123_t *)&heap[KERNEL_malloc(sizeof(pte123_t) * PAGE_TABLE_ENTRY_NUM)];
+  pte123_t *dst = (pte123_t *)KERNEL_malloc(sizeof(pte123_t) * PAGE_TABLE_ENTRY_NUM);
 
   // copy the current page table to destination
   memcpy(dst, src, sizeof(pte123_t) * PAGE_TABLE_ENTRY_NUM);
@@ -203,7 +203,7 @@ static int compare_pagetables(pte123_t *p, pte123_t *q, int level) {
 
 static pcb_t *copy_pcb(pcb_t *parent_pcb) {
   //ATTENTION HERE!!!
-  pcb_t *child_pcb = (pcb_t *)&heap[KERNEL_malloc(sizeof(pcb_t))];
+  pcb_t *child_pcb = (pcb_t *)KERNEL_malloc(sizeof(pcb_t));
   if (child_pcb == NULL) {
     return NULL;
   }
