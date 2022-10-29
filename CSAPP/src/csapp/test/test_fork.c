@@ -220,7 +220,6 @@ static void TestFork_cow() {
   };
   uint64_t code_ppn = (uint64_t)(((pte4_t *)get_pagetableentry(
                     p1.mm.pgd, &code_addr, 4, 0))->ppn);
-  printf("code_ppn %lx\n", code_ppn);
   memcpy((char *)(&pm[code_ppn]), &code,
          sizeof(char) * 22 * MAX_INSTRUCTION_CHAR);
 
@@ -238,7 +237,7 @@ static void TestFork_cow() {
   syscall_init();
 
   // this should trigger page fault
-  for (int i = 0; i < 50; ++i)
+  for (int i = 0; i < 500; ++i)
   {
     instruction_cycle();
   }

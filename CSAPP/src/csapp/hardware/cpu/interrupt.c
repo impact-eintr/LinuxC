@@ -83,7 +83,7 @@ static uint64_t hardware_push_trapframe(trapframe_t *tf) {
   assert(tf_size < KERNEL_STACK_SIZE);
   rsp -= tf_size;
   memcpy((trapframe_t *)rsp, tf, tf_size);
-  printf("tf->rip: %lx tf->rsp: %lx cpu_reg.rsp: %lx\n", tf->rip, tf->rsp, rsp+tf_size);
+  //printf("tf->rip: %lx tf->rsp: %lx cpu_reg.rsp: %lx\n", tf->rip, tf->rsp, rsp+tf_size);
 
   // 3.  Update RSP
   cpu_reg.rsp = rsp;
@@ -191,7 +191,7 @@ void interrupt_stack_switching(uint64_t int_vec) {
     .rsp = cpu_reg.rsp
   };
 
-  printf("int_vec:%lx tf.rip: %lx tf.rsp: %lx\n", int_vec, tf.rip, tf.rsp);
+  //printf("int_vec:%lx tf.rip: %lx tf.rsp: %lx\n", int_vec, tf.rip, tf.rsp);
   // 2.  Loads the segment selector and stack pointer for the new stack
   //     (that is, the stack for the privilege level(特权级) begin called)
   //     from the TSS into the SS and ESP registers and switchrs to the new stack

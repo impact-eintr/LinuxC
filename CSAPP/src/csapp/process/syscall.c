@@ -60,7 +60,7 @@ static void write_handler() {
   for (int i = 0; i < buf_length; ++i) {
     // printf as yellow
     uint64_t pc_pa = va2pa(buf_vaddr + i, 0);
-    printf("\033[35;1m%c\033[0m", cpu_read8bits_dram(pc_pa));
+    printf(PINKSTR("%c"), cpu_read8bits_dram(pc_pa));
   }
 }
 
@@ -78,7 +78,7 @@ static void execve_handler() {}
 
 static void exit_handler() {
   uint64_t exit_status = cpu_reg.rdi;
-  printf("\033[33;1mExit with %lx\n\033[0m", exit_status);
+  printf(REDSTR("Exit with %lx\n"), exit_status);
 }
 
 static void wait_handler() {}

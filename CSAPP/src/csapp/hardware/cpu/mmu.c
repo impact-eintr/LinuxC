@@ -184,7 +184,6 @@ static uint64_t page_walk(uint64_t vaddr_value, int write_request) {
       printf(REDSTR("\tProtection Fault\n"));
       goto PAISE_PAGE_FAULT;
     }
-    //printf(YELLOWSTR("\tMMU HIT\n"));
     return paddr.paddr_value;
   } else {
     printf(REDSTR("MMU (%lx): level 4 page fault: [%x].present == 0\n"),
