@@ -178,6 +178,8 @@ static uint64_t page_walk(uint64_t vaddr_value, int write_request) {
   if (pte->present == 1) {
     // find page table entry
     address_t paddr = {.ppn = pte->ppn, .ppo = vpo};
+
+    // 当child的一个写操作要修改只读的page时，将发生一个Protection Fault(写保护Fault)
     if (pte->readonly == 1 && write_request) {
       printf(REDSTR("\tProtection Fault\n"));
       goto PAISE_PAGE_FAULT;

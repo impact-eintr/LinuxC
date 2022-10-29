@@ -219,8 +219,10 @@ static void TestFork_cow() {
       "jmp    $0x00400400",
   };
   uint64_t code_ppn = (uint64_t)(((pte4_t *)get_pagetableentry(
-                  p1.mm.pgd, &code_addr, 4, 0))->ppn);
-  memcpy((char *)(&pm[0]), &code, sizeof(char) * 22 * MAX_INSTRUCTION_CHAR);
+                    p1.mm.pgd, &code_addr, 4, 0))->ppn);
+  printf("code_ppn %lx\n", code_ppn);
+  memcpy((char *)(&pm[code_ppn]), &code,
+         sizeof(char) * 22 * MAX_INSTRUCTION_CHAR);
 
   // create kernel stacks for trap into kernel
   kstack_t *stack_buf = aligned_alloc(KERNEL_STACK_SIZE, KERNEL_STACK_SIZE);

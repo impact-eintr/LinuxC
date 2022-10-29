@@ -286,7 +286,8 @@ void fix_pagefault() {
     assert(0);
   } else {
     // found in area
-    // PROTECTION FAULT
+    // trap入Kernel，kernel检查VMA发现是可写的，
+    // 表示这是一个COW操作，这时会发生一个拷贝
     if (pte->readonly == 1 && area->vma_mode.write == 1) {
       copy_on_write(pte); // child cow
     } else {
@@ -295,6 +296,7 @@ void fix_pagefault() {
     return;
   }
 #endif
+  // native fork copy
 
   // 1 try to request one free physical page from DRAM
   for (int i = 0;i < MAX_NUM_PHYSICAL_PAGE;++i) {

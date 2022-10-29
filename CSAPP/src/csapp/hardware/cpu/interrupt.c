@@ -230,7 +230,7 @@ void interrupt_return_stack_switching() {
 // interrupt handlers
 
 void timer_handler() {
-  printf(""GREENSTR("Timer interrupt to invoke OS scheduling")"\n");
+  printf(GREENSTR("Timer interrupt to invoke OS scheduling\n"));
   software_push_userframe(); // p1
   os_schedule();
   // After 'os_schedule', rip is running on another process.
@@ -241,7 +241,7 @@ void timer_handler() {
 }
 
 void pagefault_handler() {
-  printf(""GREENSTR("Page fault handling")"\n");
+  printf(GREENSTR("Page fault handling\n"));
   software_push_userframe();
   fix_pagefault();
   os_schedule();
@@ -249,7 +249,7 @@ void pagefault_handler() {
 }
 
 void syscall_handler() {
-  printf(""GREENSTR("Invoking system call [%lx]")"\n", cpu_reg.rax);
+  printf(GREENSTR("Invoking system call [%lx]\n"), cpu_reg.rax);
 
   // push user general registers to kernel stack
   // to save the context of user thread
