@@ -18,6 +18,8 @@ static uint64_t construct_vma_node() {
   vma->filepath[0] = '\0';
   vma->next = vma;
   vma->prev = vma;
+  vma->anonymous_prev = NULL;
+  vma->anonymous_next = NULL;
   vma->vma_start = 0;
   vma->vma_end = 0;
   vma->mode_value = 0;
@@ -285,4 +287,18 @@ void setup_pagetable_from_vma(pcb_t *proc) {
     // move to next area
     a = a->next;
   }
+}
+
+// Actually, this function should be implemented by Red-Black Tree
+vm_area_t *search_vma_vaddr(pcb_t *p, uint64_t vaddr) {
+  assert(p != NULL);
+
+  vm_area_t *a = (vm_area_t *)(p->mm.vma.head);
+  for (size_t i = 0; i < p->mm.vma.count; i++) {
+    if (a->vma_start <= vaddr && vaddr < a->vma_end) {
+      return a;
+    }
+    a = a->next;
+  }
+  return NULL;
 }

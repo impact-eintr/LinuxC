@@ -11,6 +11,7 @@
 //#define KERNEL_malloc malloc
 #define KERNEL_malloc(size) &heap[mem_alloc(size)]
 #define KERNEL_algined_alloc mem_aligned_alloc
+#define KERNEL_free(vaddr) mem_free(vaddr)
 
 typedef struct STRUCT_TRAPFRAME{
   // error code

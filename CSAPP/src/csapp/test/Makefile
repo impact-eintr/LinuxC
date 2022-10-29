@@ -73,10 +73,10 @@ context:
 FSRC    = $(ALGO)/hashtable.c $(ALGO)/trie.c \
 					$(CPU)/isa.c $(CPU)/mmu.c $(CPU)/interrupt.c $(CPU)/inst.c $(CPU)/sram.c \
 					$(MEM)/dram.c  $(MEM)/swap.c\
-					$(PROC)/syscall.c $(PROC)/pagefault.c $(PROC)/schedule.c $(PROC)/fork.c
+					$(PROC)/syscall.c $(PROC)/pagefault.c $(PROC)/schedule.c $(PROC)/fork.c $(PROC)/vmarea.c
 
 fork:
-	$(CC) $(COMMON)/convert.c $(FSRC) $(MSRC) $(IM) test_fork.c $(CFLAGS) -DUSE_PAGETABLE_VA2PA -DUSE_TLB_HARDWARE -o test
+	$(CC) $(COMMON)/convert.c $(FSRC) $(MSRC) $(IM) test_fork.c $(CFLAGS) -DUSE_PAGETABLE_VA2PA -DUSE_TLB_HARDWARE -DUSE_FORK_COW -o test
 	./test
 
 

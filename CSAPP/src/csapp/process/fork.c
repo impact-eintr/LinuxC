@@ -19,8 +19,6 @@ void map_pte4(pte4_t *pte, uint64_t ppn);
 static pcb_t* fork_naive_copy(pcb_t *parent_pcb);
 static pcb_t* fork_cow(pcb_t *parent_pcb);
 
-#define USE_FORK_NATIVE_COPY
-//#define USE_FORK_COW
 uint64_t syscall_fork() {
   pcb_t *parent = get_current_pcb();
   pcb_t *child = NULL;
@@ -73,16 +71,12 @@ static void copy_vmareas(pcb_t *src, pcb_t *dst) {
 
   vm_area_t *src_vma = (vm_area_t *)src->mm.vma.head;
   for (int i = 0;i < src->mm.vma.count;++i) {
-    vm_area_t *dst_vma = (vm_area_t *)&heap[KERNEL_malloc(sizeof(vm_area_t))];
+    vm_area_t *dst_vma = (vm_area_t *)KERNEL_malloc(sizeof(vm_area_t));
     dst_vma->vma_start = src_vma->vma_start;
     dst_vma->vma_end = src_vma->vma_end;
-    dst_vma->mode_value = src_vma->mode_value;
+    dst_vma->mode_value = src_vma->mode_value; // R/W
     strcpy(dst_vma->filepath, src_vma->filepath);
     dst_vma->rbt_color = src_vma->rbt_color;
-
-    // update the shared bit in vma mode
-    src_vma->vma_mode.private = 0;
-    dst_vma->vma_mode.private = 0;
 
     // add the virtual memory area to child process
     vma_add_area(dst, dst_vma);
@@ -109,9 +103,15 @@ static pte123_t *copy_pagetable(pte123_t *src, int level) {
       if (dst[j].present == 1) {
         // This is a valid pte4
         pte4_t *pte = (pte4_t *)&dst[j];
+        // NOTE difference from vmarea: RW to RO
         pte->readonly = 1;
         (&src[j])->readonly = 1;
-        // TODO update page_map.count
+        // update page_map.mappings
+        uint64_t ppn = (uint64_t)(((pte4_t *)&src[j])->ppn); // find ppn
+        map_pte4((pte4_t *)&dst[j], ppn);
+      } else {
+        // TODO
+        // if parent table entry tells that physical frame is swapped out...
       }
     }
 #endif
@@ -245,6 +245,10 @@ static pcb_t *copy_pcb(pcb_t *parent_pcb) {
   // copy virtual memory areas
   copy_vmareas(parent_pcb, child_pcb);
 
+#if defined(USE_TLB_HARDWARE) && defined(USE_PAGETABLE_VA2PA)
+    flush_tlb();
+#endif
+
   // All copy works are done here
   return child_pcb;
 }
@@ -260,6 +264,7 @@ static pcb_t* fork_naive_copy(pcb_t *parent_pcb) {
     return NULL;
   }
 
+  // copy PCB
   pcb_t *child_pcb = copy_pcb(parent_pcb);
   assert(child_pcb != NULL);
 
@@ -270,4 +275,8 @@ static pcb_t* fork_naive_copy(pcb_t *parent_pcb) {
   return child_pcb;
 }
 
-static pcb_t* fork_cow(pcb_t *parent_pcb) { return 0; }
+static pcb_t* fork_cow(pcb_t *parent_pcb) {
+  pcb_t *child_pcb = copy_pcb(parent_pcb);
+  assert(child_pcb != NULL);
+  return child_pcb;
+}

@@ -133,7 +133,6 @@ static int write_tlb(uint64_t vaddr_value, uint64_t paddr_value,
 }
 
 void flush_tlb() {
-  printf("FLUSH TLB\n");
   memset(&mmu_tlb, 0, sizeof(tlb_cache_t));
 }
 
@@ -179,16 +178,15 @@ static uint64_t page_walk(uint64_t vaddr_value, int write_request) {
   if (pte->present == 1) {
     // find page table entry
     address_t paddr = {.ppn = pte->ppn, .ppo = vpo};
-    // TODO
     if (pte->readonly == 1 && write_request) {
       printf(REDSTR("\tProtection Fault\n"));
       goto PAISE_PAGE_FAULT;
     }
+    //printf(YELLOWSTR("\tMMU HIT\n"));
     return paddr.paddr_value;
   } else {
-    printf(
-        REDSTR("MMU (%lx): level 4 page fault: [%x].present == 0\n"),
-        vaddr_value, vaddr.vpn4);
+    printf(REDSTR("MMU (%lx): level 4 page fault: [%x].present == 0\n"),
+           vaddr_value, vaddr.vpn4);
   }
 PAISE_PAGE_FAULT:
   mmu_vaddr_pagefault = vaddr.vaddr_value;

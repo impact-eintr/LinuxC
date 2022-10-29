@@ -10,6 +10,7 @@
 #include "../headers/interrupt.h"
 #include "../headers/cpu.h"
 #include "../headers/process.h"
+#include "../headers/color.h"
 
 uint64_t mmu_vaddr_pagefault;
 
@@ -17,13 +18,23 @@ uint64_t mmu_vaddr_pagefault;
 int swap_in(uint64_t saddr, uint64_t ppn);
 int swap_out(uint64_t saddr, uint64_t ppn);
 
+vm_area_t * search_vma_vaddr(pcb_t *, uint64_t);
+int copy_physicalframe(pte4_t *child_pte, uint64_t parent_ppn);
+
+#define MAX_REVERSED_MAPPING_NUMBER (4)
+
 // physical page descriptor
 typedef struct {
   int allocated;
   int dirty;
   int time; // LRU cache: 0 - Fresh
 
-  pte4_t *pte4;
+  pte4_t *mapping[MAX_REVERSED_MAPPING_NUMBER];
+  // struct page中有一个mapping字段负责反向映射
+  // mapping中一个bit用来表示是fileback 还是 anonymous
+  // fileback 映射到 address space
+  // anonymous 映射到 anonymous_vma 这是一个链表 链接所有共享该page的vma
+  uint64_t reversed_counter;
   uint64_t saddr;
 } pd_t;
 
@@ -75,14 +86,26 @@ void page_map_init() {
     page_map[k].allocated = 0;
     page_map[k].dirty = 0;
     page_map[k].time = 0;
-    page_map[k].pte4 = NULL;
+    page_map[k].reversed_counter = 0;
+    for (int i = 0;i < MAX_REVERSED_MAPPING_NUMBER; ++i) {
+      page_map[k].mapping[i] = NULL;
+    }
   }
 }
 
 void pagemap_update_time(uint64_t ppn) {
   assert(0 <= ppn && ppn < MAX_NUM_PHYSICAL_PAGE);
   assert(page_map[ppn].allocated == 1);
-  assert(page_map[ppn].pte4->present == 1);
+  // check reversed_count
+  int reversed_count = 0;
+  for (int i = 0;i < MAX_REVERSED_MAPPING_NUMBER; ++i) {
+    if (page_map[ppn].mapping[i] != NULL) {
+      assert(page_map[ppn].mapping[i]->present == 1);
+      reversed_count += 1;
+    }
+  }
+  assert(reversed_count == page_map[ppn].reversed_counter);
+
   for (int i = 0;i < MAX_NUM_PHYSICAL_PAGE;++i) {
     page_map[i].time += 1;
   }
@@ -92,9 +115,23 @@ void pagemap_update_time(uint64_t ppn) {
 void pagemap_dirty(uint64_t ppn) {
   assert(0 <= ppn && ppn < MAX_NUM_PHYSICAL_PAGE);
   assert(page_map[ppn].allocated == 1);
-  assert(page_map[ppn].pte4->present == 1);
+  // check reversed_count
+  int reversed_count = 0;
+  for (int i = 0; i < MAX_REVERSED_MAPPING_NUMBER; ++i) {
+    if (page_map[ppn].mapping[i] != NULL) {
+      assert(page_map[ppn].mapping[i]->present == 1);
+      reversed_count += 1;
+    }
+  }
+  assert(reversed_count == page_map[ppn].reversed_counter);
+
   page_map[ppn].dirty = 1;
-  page_map[ppn].pte4->dirty = 1;
+  for (int i = 0; i < MAX_REVERSED_MAPPING_NUMBER; ++i) {
+    if (page_map[ppn].mapping[i] != NULL) {
+      page_map[ppn].mapping[i]->dirty = 1;
+      reversed_count += 1;
+    }
+  }
 }
 
 // used by frame swap-in from swap space
@@ -102,12 +139,15 @@ void set_pagemap_swapaddr(uint64_t ppn, uint64_t swap_address) {
   assert(0 <= ppn && ppn < MAX_NUM_PHYSICAL_PAGE);
   page_map[ppn].saddr = swap_address;
 }
-
+/*  When mapped
+   Page table entry: present = 1, ppn
+   page_map[ppn]: pte4, swap address
+   data on DRAM[ppn] (DIRTY/CLEAN), SWAP[swap address]
+*/
 void map_pte4(pte4_t *pte, uint64_t ppn) {
   assert(0 <= ppn && ppn < MAX_NUM_PHYSICAL_PAGE);
-  assert(page_map[ppn].allocated == 0);
   assert(page_map[ppn].dirty == 0);
-  assert(page_map[ppn].pte4 == NULL);
+  assert(page_map[ppn].reversed_counter < MAX_REVERSED_MAPPING_NUMBER);
 
   // Let's consider this, where can we store the swap adress on disk?
   // In this case of physical page being allocated and papped,
@@ -118,28 +158,112 @@ void map_pte4(pte4_t *pte, uint64_t ppn) {
   pte->present = 1;
   pte->ppn = ppn;
   pte->dirty = 0;
-  // reversed mapping
+
   page_map[ppn].allocated = 1;
-  page_map[ppn].dirty = 0;
-  page_map[ppn].time = 0;
-  page_map[ppn].pte4 = pte;
+  //page_map[ppn].dirty = 0;
+  page_map[ppn].time = 0; // LRU
+
+  // reversed mapping
+  int success = 0;
+  for (int i = 0; i < MAX_REVERSED_MAPPING_NUMBER; ++i) {
+    if (page_map[ppn].mapping[i] == NULL) {
+      page_map[ppn].mapping[i] = pte;
+      success = 1;
+      break;
+    }
+  }
+  assert(success == 1);
+  page_map[ppn].reversed_counter += 1;
 }
 
-void unmap_pte4(uint64_t ppn) {
+/*  When unmapped
+    Page table entry: present = 0, swap address
+    page_map[ppn]: not applicable any more
+    data on SWAP[swap address] (WB)
+*/
+void unmapall_pte4(uint64_t ppn) {
   assert(0 <= ppn && ppn < MAX_NUM_PHYSICAL_PAGE);
   assert(page_map[ppn].allocated == 1);
-  pte4_t *pte = page_map[ppn].pte4;
-  assert(pte->present == 1);
+  assert(page_map[ppn].reversed_counter > 0);
 
-  pte->pte_value = 0;
-  pte->present = 0;
-  pte->saddr = page_map[ppn].saddr;
-
-  // reversed mapping
+  // clear all the reversed mapping
   page_map[ppn].allocated = 0;
   page_map[ppn].dirty = 0;
   page_map[ppn].time = 0;
-  page_map[ppn].pte4 = NULL;
+
+  for (int i = 0;i < MAX_REVERSED_MAPPING_NUMBER; ++i) {
+    if (page_map[ppn].mapping[i] != NULL) {
+      // release the PTE
+      pte4_t *pte =page_map[ppn].mapping[i];
+      assert(pte->present == 1);
+      pte->pte_value = 0;
+      pte->present = 0;
+
+      pte->saddr = page_map[ppn].saddr;
+
+      // release reversed mapping
+      page_map[ppn].mapping[i] = NULL;
+      page_map[ppn].reversed_counter -= 1;
+    }
+  }
+  assert(page_map[ppn].reversed_counter == 0);
+  // now page_map[ppn] can be used by other page table entry
+}
+
+static void copy_on_write(pte4_t *pte) {
+  //  pte: the corresponding pte of COW vaddr
+  assert(pte->present == 1);
+  assert(pte->readonly == 1);
+  printf(BLUESTR("\tCopy-on-Write\n"));
+  // Get the old ppn, this ppn should be mapped by multiple processes's PTEs
+  uint64_t old_ppn = (uint64_t)pte->ppn;
+  assert(page_map[old_ppn].reversed_counter > 1);
+
+  // Update the left mappings
+  pte4_t *remaining[MAX_REVERSED_MAPPING_NUMBER];
+  int remaining_count = 0;
+  for (int i = 0; i < MAX_REVERSED_MAPPING_NUMBER; ++i) {
+    pte4_t *t = page_map[old_ppn].mapping[i];
+    if (t != pte && t != NULL) {
+      remaining[i] = t;
+      remaining_count += 1;
+    } else {
+      remaining[i] = NULL;
+    }
+  }
+
+  // remove all remaining from old ppn
+  unmapall_pte4(old_ppn);
+
+  // reinsert and update r/w mode
+  // parent PTE remap
+  for (int i = 0; i < MAX_REVERSED_MAPPING_NUMBER; ++i) {
+    if (remaining[i] != NULL) {
+      assert(remaining[i]->readonly == 1);
+      map_pte4(remaining[i], old_ppn);
+
+      if (remaining_count == 1) {
+        // if only one pte is left, set it to read/write
+        // This is the case: old mappings = [parent, child]
+        // both are read only. The new mappings are [parent]
+        // [child], both are read/write.
+        remaining[i]->readonly = 0;
+      }
+    }
+  }
+
+  // Allocate new physical frame for the PTE
+  // Copy data in physical frame
+  int success = copy_physicalframe(pte, old_ppn); // 这里将pte->ppn修改
+  pte->readonly = 0;
+  assert(success == 1);
+  assert(pte->present == 1);
+  uint64_t new_ppn = (uint64_t)pte->ppn;
+  assert(new_ppn != old_ppn);
+
+  printf(
+      BLUESTR("\tPTE<%p> removed from Frame[%ld]. New Frame[%ld] allocated\n"),
+      pte, old_ppn, new_ppn);
 }
 
 // fix pagefault : interrupt.c/pagefault_handler() call
@@ -154,13 +278,31 @@ void fix_pagefault() {
   // get the level 4 page table entry
   pte4_t *pte = (pte4_t *)get_pagetableentry(pgd, &vaddr, 4, 1);
 
+#ifdef USE_FORK_COW
+  // check read/write in vma
+  vm_area_t *area = search_vma_vaddr(pcb, vaddr.vaddr_value);
+  if (area == NULL) {
+    // not in area
+    assert(0);
+  } else {
+    // found in area
+    // PROTECTION FAULT
+    if (pte->readonly == 1 && area->vma_mode.write == 1) {
+      copy_on_write(pte); // child cow
+    } else {
+      assert(0);
+    }
+    return;
+  }
+#endif
+
   // 1 try to request one free physical page from DRAM
   for (int i = 0;i < MAX_NUM_PHYSICAL_PAGE;++i) {
     if (page_map[i].allocated == 0) {
       // found i as free ppn
       map_pte4(pte, i);
-      printf("\033[34;1m\tPageFault: vaddr[%lx] use free ppn %ld\033[0m\n",
-             vaddr.address_value, pte->ppn);
+      printf(BLUESTR("\tPageFault: vaddr[%lx] use free ppn %d\n"),
+             vaddr.address_value, i);
       return;
     }
   }
@@ -178,13 +320,13 @@ void fix_pagefault() {
   }
   // this si the selected ppn for vaddr
   if (-1 != lru_ppn && lru_ppn < MAX_NUM_PHYSICAL_PAGE) {
-    unmap_pte4(lru_ppn);
+    unmapall_pte4(lru_ppn);
     // load page from disk to physical memory
     // at the victim's ppn
     swap_in(pte->saddr, lru_ppn);
     map_pte4(pte, lru_ppn);
 
-    printf("\033[34;1m\tPageFault: discard clean ppn %d as victim\033[0m\n", lru_ppn);
+    printf(BLUESTR("\tPageFault: discard clean ppn %d as victim\n"), lru_ppn);
     return;
   }
 
@@ -203,12 +345,12 @@ void fix_pagefault() {
   // write back
   swap_out(page_map[lru_ppn].saddr, lru_ppn);
   // unmap victim
-  unmap_pte4(lru_ppn);
+  unmapall_pte4(lru_ppn);
   // load page from disk to physical memory
   swap_in(pte->saddr, lru_ppn);
   map_pte4(pte, lru_ppn);
 
-  printf("\033[34;1m\tPageFault: write back & use ppn %d\033[0m\n", lru_ppn);
+  printf(BLUESTR("\tPageFault: write back & use ppn %d\n"), lru_ppn);
 }
 
 int allocate_physicalframe(pte4_t *pte) {

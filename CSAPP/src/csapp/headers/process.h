@@ -24,6 +24,8 @@ typedef struct STRUCT_PROCESS_CONTEXT {
 typedef struct VIRTUAL_MEMORY_AREA_STRUCT {
   struct VIRTUAL_MEMORY_AREA_STRUCT *prev;
   struct VIRTUAL_MEMORY_AREA_STRUCT *next;
+  struct VIRTUAL_MEMORY_AREA_STRUCT *anonymous_prev; // 匿名页指针
+  struct VIRTUAL_MEMORY_AREA_STRUCT *anonymous_next; // 匿名页指针
   uint64_t vma_start; // 第一个属于该vma的地址
   uint64_t vma_end; // 第一个不属于该vma的地址
   union {
@@ -46,16 +48,14 @@ typedef struct PROCESS_CONTROL_BLOCK_STRUCT {
   struct {
     // page global directory
     // This value is what's in CR3 register right now
+    // page global directory
+    // This value is what's in CR3 register right now
     union {
-      // page global directory
-      // This value is what's in CR3 register right now
-      union {
-        uint64_t pgd_paddr;
-        pte123_t *pgd;
-      };
-      // virtual memory area
-      linkedlist_internal_t vma;
+      uint64_t pgd_paddr;
+      pte123_t *pgd;
     };
+    // virtual memory area
+    linkedlist_internal_t vma;
   } mm;
 
   kstack_t *kstack;
