@@ -890,4 +890,19 @@ Garbage :
 ### Mark Copy
 - SICP Lisp
 
+| parent.PTE(level 4) | parent.VMA | child.PTE(level4 | child.VMA | page desc.count     | 发生的时间            |
+|---------------------|------------|------------------|-----------|---------------------|-----------------------|
+| va->pa[5] RW        | RW_P       | 没有创建         | 没有创建  | [5]: 1              | before fork           |
+| va->pa[5]  RO       | RW_S       | va->pa[5] RO     | RW_S      | [5]: 2              | fork                  |
+| va->pa[5] RO        | RW_S       | va->pa[5] RO     | RW_S      | [5]:2               | child call push       |
+| va->pa[5] RW        | RW_P       | va->pa[6] RW     | RW_P      | [5]: 2-> 1 [6]:0->1 | after child call push |
+
+当child的一个写操作要修改只读的page时，将发生一个Protection Fault(写保护Fault)
+
+然后trap入Kernel，kernel检查VMA发现是可写的，表示这是一个COW操作，这时会发生一个拷贝
+
+page table entry 也就是 PTE 这是由硬件提供的 它只能提供给我们RO 或者 RW权限的信息
+
+virtual memory area VMA
+
 
