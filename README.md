@@ -18,7 +18,7 @@
 
 # 交流群
 
-<img src=./wx_group.png style="zoom:25%" />
+<img src=./wx_group.png width="250" />
 
 
 
