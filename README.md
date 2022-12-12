@@ -18,7 +18,8 @@
 
 # 交流群
 
-![img](./wx_group.png)
+<img src=./wx_group.png style="zoom:25%" />
+
 
 
 # Linux基础知识
