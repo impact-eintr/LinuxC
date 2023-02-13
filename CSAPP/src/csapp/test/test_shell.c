@@ -160,13 +160,14 @@ static void child_process(userinput_t *input) {
   } else {
     if (input->type == FOREGROUND_JOB) {
       job_add(pid, FG_RUNNING, input->raw);
-      fg_reaped =0;
+      fg_reaped = 0;
       fg_pid = pid;
 
       // unblock
       sigprocmask(SIG_SETMASK, &prev, NULL);
 
       while (fg_reaped == 0) {
+        printf("main process running\n");
         sleep(1);
       }
     } else if (input->type == BACKGROUND_JOB) {
