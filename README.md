@@ -18,7 +18,7 @@
 
 # 交流群
 
-<img src=./wx_group.png width="250" />
+<img src=./wx_group.jpg width="250" />
 
 
 
@@ -71,7 +71,7 @@ info 与 man 类似，但是 info 将文档分成一个个页面，每个页面�
 -c :  取消已经在进行的 shutdown 指令内容
  
 ```
- 
+
 ### ¶ PATH 可以在环境变量 
 
 PATH 中声明可执行文件的路径，路径之间用 : 分隔。 
@@ -79,7 +79,7 @@ PATH 中声明可执行文件的路径，路径之间用 : 分隔。
 ```shell
 /usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/home/dmtsai/.local/bin:/home/dmtsai/bin
 ```
-  
+
 ### ¶ sudo 
 sudo 允许一般用户使用 root 可执行的命令，不过只有在 /etc/sudoers 配置文件中添加的用户才能使用该指令。 
 
@@ -173,7 +173,7 @@ BIOS 是开机的时候计算机执行的第一个程序，这个程序知道可
 主要开机记录(MBR)中的开机管理程序提供以下功能:
 
 选单、载入核心文件以及转交其它开机管理程序。转交这个功能可以用来实现了多重引导，只需要将另一个操作系统的开机管理程序安装在其它分区的启动扇区上，在启动开机管理程序时，就可以通过选单选择启动当前的操作系统或者转交给其它开机管理程序从而启动另一个操作系统。 
- 
+
 下图中，第一扇区的主要开机记录(MBR)中的开机管理程序提供了两个选单: M1、M2，M1 指向了 Windows 操作系统，而 M2 指向其它分区的启动扇区，里面包含了另外一个开机管理程序，提供了一个指向 Linux 的选单。  
 
 安装多重引导，最好先安装 Windows 再安装 Linux。因为安装 Windows 时会覆盖掉主要开机记录(MBR)，而 Linux 可以选择将开机管理程序安装在主要开机记录(MBR)或者其它分区的启动扇区，并且可以设置开机管理程序的选单。 
@@ -293,13 +293,13 @@ inode 中记录了文件内容所在的 block 编号，但是每个 block 非常
 -l : 以长数据串行列出，包含文件的属性与权限等等数据
  
 ```
- 
+
 ####  2. cd 更换当前目录。 
 
 ```shell
 cd [相对路径或绝对路径]
 ```
-  
+
 #### ¶ 3. mkdir 创建目录。 
 
 ```shell
@@ -307,7 +307,7 @@ cd [相对路径或绝对路径]
 -m : 配置目录权限
 -p : 递归创建目录
 ```
-  
+
 #### ¶ 4. rmdir 删除目录，目录必须为空。 
 
 ```shell
@@ -325,7 +325,7 @@ rmdir [-p] 目录名称
 -d :  后面可以接更新日期而不使用当前日期，也可以使用 --date="日期或时间"
 -t :  后面可以接更新时间而不使用当前时间，格式为[YYYYMMDDhhmm]
 ```
-  
+
 #### ¶ 6. cp 
 
 复制文件。 如果源文件有两个以上，则目的文件一定要是目录才行。
@@ -340,14 +340,14 @@ cp [-adfilprsu] source destination
 -u : destination 比 source 旧才更新 destination，或 destination 不存在的情况下才复制
 --preserve=all : 除了 -p 的权限相关参数外，还加入 SELinux 的属性, links, xattr 等也复制了
 ```
-  
+
 #### ¶ 7. rm 删除文件。
 
 ```shell
 ## rm [-fir] 文件或目录
 -r : 递归删除
 ```
-  
+
 #### ¶ 8. mv 
 
 移动文件。 
@@ -385,14 +385,14 @@ cp [-adfilprsu] source destination
 - +: 添加权限
 - -: 移除权限
 - =: 设定权限
- ``` 
- 
+```
+
  示例: 为 .bashrc 文件的所有用户添加写权限。 
- 
+
  ```shell
  ## chmod a+w .bashrc
  ```
-  
+
 ### ¶ 文件默认权限 
 
 - 文件默认权限: 文件默认没有可执行权限，因此为 666，也就是 -rw-rw-rw- 。
@@ -413,9 +413,9 @@ cp [-adfilprsu] source destination
 -f : 如果目标文件存在时，先删除目标文件
 ```
 
-  
+
 #### ¶ 1. 实体链接 
- 
+
 在目录下创建一个条目，记录着文件名与 inode 编号，这个 inode 就是源文件的 inode。 删除任意一个条目，文件还是存在，只要引用数量不为 0。 有以下限制: 不能跨越文件系统、不能对目录进行链接。
 
 ```shell
@@ -437,7 +437,7 @@ cp [-adfilprsu] source destination
 53745909 lrwxrwxrwx. 1 root root 12 Jun 23 22:31 /root/crontab2 -> /etc/crontab
 ```
 
-  
+
 ### ¶ 获取文件内容 
 
 #### ¶ 1. cat 取得文件内容。 
@@ -447,7 +447,7 @@ cp [-adfilprsu] source destination
 -n : 打印出行号，连同空白行也会有行号，-b 不会
 ```
 
-  
+
 #### ¶ 2. tac 是 cat 的反向操作，从最后一行开始打印。 
 
 #### ¶ 3. more 和 cat 不同的是它可以一页一页查看文件内容，比较适合大文件的查看。 
@@ -461,7 +461,7 @@ cp [-adfilprsu] source destination
 ## head [-n number] filename
 -n : 后面接数字，代表显示几行的意思
 ```
-  
+
 #### ¶ 6. tail 是 head 的反向操作，只是取得是后几行。 
 
 #### ¶ 7. od 以字符或者十六进制的形式显示二进制文件。 
@@ -477,10 +477,10 @@ cp [-adfilprsu] source destination
 -a : 将所有指令列出，而不是只列第一个
 ```
 
-  
+
 #### ¶ 2. whereis 
 文件搜索。速度比较快，因为它只搜索几个特定的目录。 ## whereis [-bmsu] dirname/filename
-  
+
 #### ¶ 3. locate
 
 文件搜索。可以用关键字或者正则表达式进行搜索。 locate 使用 /var/lib/mlocate/ 这个数据库来进行搜索，它存储在内存中，并且每天更新一次，所以无法用 locate 搜索新建的文件。可以使用 updatedb 来立即更新数据库。
@@ -501,7 +501,7 @@ example: find . -name "shadow*"
 
 ```
 
- 
+
 > (一)与时间有关的选项 
 
 ``` shell
@@ -511,7 +511,7 @@ example: find . -name "shadow*"
 -newer file :  列出比 file 更新的文件
 ```
 
- 
+
 > (二)与文件拥有者和所属群组有关的选项 
 
 ``` shell
@@ -524,7 +524,7 @@ example: find . -name "shadow*"
  
 ```
 
- 
+
 > (三)与文件权限和名称有关的选项 
 
 ``` shell
@@ -574,7 +574,7 @@ $ gzip [-cdtv#] filename
  
 ```
 
- 
+
 #### ¶ 2. bzip2
 
 提供比 gzip 更高的压缩比。 查看命令: bzcat、bzmore、bzless、bzgrep。
@@ -584,7 +584,7 @@ $ bzip2 [-cdkzv#] filename
 -k : 保留源文件
 ```
 
- 
+
 #### ¶ 3. xz 
 
 提供比 bzip2 更佳的压缩比。 可以看到，gzip、bzip2、xz 的压缩比不断优化。不过要注意的是，压缩比越高，压缩的时间也越长。 
@@ -596,7 +596,7 @@ $ xz [-dtlkc#] filename
  
 ```
 
- 
+
 ### ¶ 打包 
 
 压缩指令只能对一个文件进行压缩，而打包能够将多个文件打包成一个大文件。tar 不仅可以用于打包，也可以使用 gip、bzip2、xz 将打包文件进行压缩。
@@ -622,7 +622,7 @@ $ tar [-z|-j|-J] [xv] [-f 已有的 tar 文件] [-C 目录]    ==解压缩
 | 打包压缩 | tar -jcv -f filename.tar.bz2 要被压缩的文件或目录名称 |
 | 查 看    | tar -jtv -f filename.tar.bz2                          |
 | 解压缩   | tar -jxv -f filename.tar.bz2 -C 要解压缩的目录        |
- 
+
 ## ¶ 七、Bash 
 
 可以通过 Shell 请求内核提供服务，Bash 正是 Shell 的一种。
@@ -647,7 +647,7 @@ $ echo $x
 $ echo ${x}
 ```
 
- 
+
 **变量内容如果有空格，必须使用双引号或者单引号。**
 - 双引号内的特殊字符可以保留原本特性，例如 `x="lang is $LANG"`，则 x 的值为 lang is zh_TW.UTF-8；
 - 单引号内的特殊字符就是特殊字符本身，例如 `x='lang is $LANG'`，则 x 的值为 lang is` $LANG`。
@@ -662,7 +662,7 @@ $ declare [-aixr] variable
 -r :  定义为 readonly 类型
 ```
 
- 
+
 使用 [ ] 来对数组进行索引操作: 
 
 ``` shell
@@ -698,7 +698,7 @@ $ find /home -name .bashrc > list 2>&1
 $ nohup latte-dock --replace > /dev/null 2>&1 & # 没有任何输出的后台任务
 ```
 
-  
+
 ## ¶ 八、管线指令
 
 管线是将一个命令的标准输出作为另一个命令的标准输入，在数据需要经过多个步骤的处理之后才能得到我们想要的内容时就可以使用管线。 
@@ -721,7 +721,7 @@ $ cut
 ```
 
 -  示例 1: last 显示登入者的信息，取出用户名。
- 
+
 ```shell
 $ last
 root pts/1 192.168.201.101 Sat Feb 7 12:35 still logged in
@@ -730,7 +730,7 @@ root pts/1 192.168.201.254 Thu Feb 5 22:37 - 23:53 (01:16)
 
 $ last | cut -d ' ' -f 1
 ```
- 
+
 - 示例 2: 将 export 输出的信息，取出第 12 字符以后的所有字符串。
 
 ``` shell
@@ -743,7 +743,7 @@ declare -x HOSTNAME="study.centos.vbird"
 $ export | cut -c 12-
 ```
 
-  
+
 ## ¶ 排序指令
 
 ### sort
@@ -795,7 +795,7 @@ $ last | cut -d ' ' -f 1 | sort | uniq -c
 1 wtmp
 ```
 
- 
+
 ### ¶ 双向输出重定向 
 
 输出重定向会将输出内容重定向到文件中，而  tee  不仅能够完成这个功能，还能保留屏幕上的输出。也就是说，使用 tee 指令，一个输出会同时传送到文件和屏幕上。 
@@ -803,7 +803,7 @@ $ last | cut -d ' ' -f 1 | sort | uniq -c
 ``` shell
 $ tee [-a] file
 ```
-  
+
 ### ¶ 字符转换指令 
 
 #### tr 
@@ -822,7 +822,7 @@ $ tr [-ds] SET1 ...
 $ last | tr '[a-z]' '[A-Z]'
 ```
 
-  
+
 #### col
 
 将 tab 字符转为空格字符。
@@ -842,7 +842,7 @@ $ expand [-t] file
 -t : tab 转为空格的数量
 ```
 
- 
+
 #### join 
 
 将有相同数据的那一行合并在一起。
@@ -855,7 +855,7 @@ $ join [-ti12] file1 file2
 -2 : 第二个文件所用的比较字段
 ```
 
- 
+
 #### paste 
 
 直接将两行粘贴在一起。 
@@ -864,7 +864,7 @@ $ join [-ti12] file1 file2
 $ paste [-d] file1 file2
 -d : 分隔符，默认为 tab
 ```
-  
+
 ### ¶ 分区指令 
 
 split  将一个文件划分成多个文件。
@@ -893,7 +893,7 @@ $ grep [-acinv] [--color=auto] 搜寻字符串 filename
  
 ```
 
- 
+
 - 示例: 把含有 the 字符串的行提取出来(注意默认会有 --color=auto 选项，因此以下内容在 Linux 中有颜色显示 the 字符串)
 
 ``` shell
@@ -911,7 +911,7 @@ $ grep -n 'the' regular_express.txt
 $ grep -n 'go\{2,5\}g' regular_express.txt
 ```
 
-  
+
 #### ¶ printf 
 
 用于格式化输出。 它不属于管道命令，在给 printf 传数据时需要使用 $( ) 形式。
@@ -924,7 +924,7 @@ $ printf '%10s %5i %5i %5i %8.2f \n' $(cat printf.txt)
  
 ```
 
- 
+
 #### ¶ awk
 
 是由 Alfred Aho，Peter Weinberger, 和 Brian Kernighan 创造，awk 这个名字就是这三个创始人名字的首字母。
@@ -966,7 +966,7 @@ daemon 2
  
 ```
 
- 
+
 awk 变量: 变量名称 代表意义 NF 每一行拥有的字段总数 NR 目前所处理的是第几行数据 FS 目前的分隔字符，默认是空格键 示例: 显示正在处理的行号以及每一行有多少字段 
 
 ``` shell
@@ -995,7 +995,7 @@ dmtsai lines: 5 columns: 9
 ``` shell
 ## top -d 2
 ```
-  
+
 #### ¶ 3. pstree 查看进程树
 
 示例: 查看所有进程树 
@@ -1012,7 +1012,7 @@ dmtsai lines: 5 columns: 9
 ## netstat -anp | grep port
 ```
 
-  
+
 ### ¶ 进程状态 
 
 #### 状态 
@@ -1025,7 +1025,7 @@ dmtsai lines: 5 columns: 9
 pid_t wait(int *status)
 ```
 
-  
+
 父进程调用 wait() 会一直阻塞，直到收到一个子进程退出的 SIGCHLD 信号，之后 wait() 函数会销毁子进程并返回。
 
 如果成功，返回被收集的子进程的进程 ID；如果调用进程没有子进程，调用就会失败，此时返回 -1，同时 errno 被置为 ECHILD。
@@ -1039,7 +1039,7 @@ pid_t wait(int *status)
 pid_t waitpid(pid_t pid, int *status, int options)
 ```
 
-  
+
 作用和 wait() 完全相同，但是多了两个可由用户控制的参数 pid 和 options。
 
 pid 参数指示一个子进程的 ID，表示只关心这个子进程退出的 SIGCHLD 信号。如果 pid=-1 时，那么和 wait() 作用相同，都是关心所有子进程退出的 SIGCHLD 信号。
