@@ -34,3 +34,5 @@ CSAPP/img/virtual memory system.kra*
 CSAPP/.*xopp
 
 CSAPP/src/csapp/test/test
+
+Kernel/src
